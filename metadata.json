@@ -2,5 +2,7 @@
   "name": "Buffr",
   "description": "A gamified habit tracker and personal character progression system that levels up your life with habits, streaks, XP, attributes, quests, and analytics.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }
