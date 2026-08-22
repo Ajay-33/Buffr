@@ -48,7 +48,7 @@ import {
   playCelebrationSound,
   triggerHapticPulse,
 } from './utils/sound';
-import { HabitTemplate } from './data/initialData';
+import { HabitTemplate, createFreshDataset } from './data/initialData';
 import { useAuth } from './firebase/AuthContext';
 import { FirestoreSyncService } from './firebase/firestoreService';
 
@@ -191,6 +191,16 @@ export default function App() {
     BuffrStorage.setOnboardingCompleted(true);
     refreshAllState();
     setIsOnboardingOpen(false);
+  };
+
+  const handleResetFresh = () => {
+    BuffrStorage.resetToFresh();
+    refreshAllState();
+    if (currentUser) {
+      FirestoreSyncService.pushAllToCloud(currentUser.uid);
+    }
+    setActiveTab('today');
+    setIsOnboardingOpen(true);
   };
 
   // Habit Toggle / Completion Progression Engine
@@ -658,6 +668,7 @@ export default function App() {
             onDeleteHabit={handleDeleteHabit}
             onOpenWidgetSimulator={() => setIsWidgetSimulatorOpen(true)}
             onResetDemoData={handleExploreDemo}
+            onResetFreshData={handleResetFresh}
             onDataImportSuccess={refreshAllState}
           />
         );

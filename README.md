@@ -96,7 +96,9 @@ The compiled static assets will be in the `dist/` directory.
 ## 💾 Cloud Sync & Data Backup
 
 - **Google Cloud Save**: Tap `G-SYNC` in the top header or navigate to **Profile ➔ Cloud Sync** to sign in with your Google account. All habits, streaks, and debriefs sync automatically across all devices.
-- **Memory Card (JSON)**: Go to **Profile** ➔ **Backup & Security** to export or import your raw JSON save state at any time.
+- **Memory Card (JSON)**: Go to **Profile** ➔ **Memory Card Save & Backup** to export or import your raw JSON save state at any time.
+- **Start Fresh / Wipe Data (Level 1 Restart)**: Under **Profile ➔ Memory Card Save & Backup**, click **START FRESH (RESET LEVEL 1)** to erase all trial habits, logs, XP, and streaks, reopening the initial setup wizard to start your serious journey from Day 1.
+- **Reload Demo Save**: Use **RELOAD 30-DAY DEMO SAVE** whenever you want to test features with sample history.
 
 ---
 

@@ -27,6 +27,8 @@ import {
   KeyRound,
   LogOut,
   RefreshCw,
+  AlertTriangle,
+  X,
 } from 'lucide-react';
 import { Habit, UserProfile, XPTransaction } from '../../types';
 import { UNLOCKED_TITLES_POOL } from '../../data/initialData';
@@ -47,6 +49,7 @@ interface ProfileViewProps {
   onDeleteHabit: (habitId: string) => void;
   onOpenWidgetSimulator: () => void;
   onResetDemoData: () => void;
+  onResetFreshData?: () => void;
   onDataImportSuccess: () => void;
 }
 
@@ -61,6 +64,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onDeleteHabit,
   onOpenWidgetSimulator,
   onResetDemoData,
+  onResetFreshData,
   onDataImportSuccess,
 }) => {
   const [isEditingName, setIsEditingName] = useState(false);
@@ -68,6 +72,25 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [habitFilter, setHabitFilter] = useState<'all' | 'active' | 'paused' | 'archived'>('all');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { currentUser, syncStatus, signInWithGoogle, signOut, syncNow, loading } = useAuth();
+
+  // In-App Retro Confirm Modal & Toast State (Bypasses browser window.confirm in iframe)
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    confirmLabel: string;
+    isDestructive?: boolean;
+    onConfirm: () => void;
+  } | null>(null);
+
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage((prev) => (prev === msg ? null : prev));
+    }, 4000);
+  };
 
   const levelInfo = calculateLevelFromTotalXp(user.totalXp);
 
@@ -81,16 +104,24 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
   const handleUseStreakFreeze = () => {
     if (user.streakFreezesRemaining <= 0) {
-      alert('NO SHIELD CHARGES REMAINING! LEVEL UP TO EARN MORE.');
+      playSound('click');
+      showToast('⚠️ NO SHIELD CHARGES REMAINING! LEVEL UP TO EARN MORE.');
       return;
     }
-    if (confirm('Deploy 1 Combo Shield to protect your streak for 24h?')) {
-      playSound('powerup');
-      onUpdateUser({
-        streakFreezesRemaining: user.streakFreezesRemaining - 1,
-      });
-      alert('⚡ COMBO SHIELD DEPLOYED! STREAK PROTECTED FOR 24 HOURS.');
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'DEPLOY COMBO SHIELD?',
+      description: 'Activate 1 Shield charge to freeze your streak and protect combo multipliers for the next 24 hours.',
+      confirmLabel: 'DEPLOY SHIELD',
+      isDestructive: false,
+      onConfirm: () => {
+        playSound('powerup');
+        onUpdateUser({
+          streakFreezesRemaining: user.streakFreezesRemaining - 1,
+        });
+        showToast('⚡ COMBO SHIELD DEPLOYED! STREAK PROTECTED FOR 24H.');
+      },
+    });
   };
 
   const handleExportJson = () => {
@@ -103,6 +134,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     a.download = `buffr_save_state_${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
+    showToast('💾 SAVE STATE JSON EXPORTED SUCCESSFULLY!');
   };
 
   const handleExportCsv = () => {
@@ -115,6 +147,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     a.download = `buffr_telemetry_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+    showToast('📊 TELEMETRY CSV LOGS EXPORTED!');
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -127,10 +160,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       const success = importDataFromJson(content);
       if (success) {
         playSound('powerup');
-        alert('MEMORY CARD SAVE STATE RESTORED SUCCESSFULLY!');
+        showToast('✅ MEMORY CARD SAVE RESTORED SUCCESSFULLY!');
         onDataImportSuccess();
       } else {
-        alert('INVALID SAVE STATE DATA.');
+        playSound('gameover');
+        showToast('❌ INVALID SAVE STATE FILE FORMAT.');
       }
     };
     reader.readAsText(file);
@@ -353,10 +387,19 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   </button>
                   <button
                     onClick={() => {
-                      if (confirm(`PURGE "${habit.title}" FROM ROM MEMORY?`)) {
-                        playSound('click');
-                        onDeleteHabit(habit.id);
-                      }
+                      playSound('click');
+                      setConfirmModal({
+                        isOpen: true,
+                        title: 'PURGE HABIT FROM ROM?',
+                        description: `Permanently delete "${habit.title}" from your character's active memory bank?`,
+                        confirmLabel: 'DELETE HABIT',
+                        isDestructive: true,
+                        onConfirm: () => {
+                          playSound('click');
+                          onDeleteHabit(habit.id);
+                          showToast(`🗑️ "${habit.title}" PURGED FROM ROM.`);
+                        },
+                      });
                     }}
                     className="p-1.5 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-600 text-rose-400"
                     title="Delete Habit"
@@ -591,20 +634,107 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           />
 
           <button
-            id="btn-reset-demo"
+            id="btn-reset-fresh"
             onClick={() => {
-              if (confirm('FACTORY RESET: Wipe save state and reload initial 30-day arcade dataset?')) {
-                playSound('gameover');
-                onResetDemoData();
-              }
+              playSound('click');
+              setConfirmModal({
+                isOpen: true,
+                title: 'START FRESH (RESET TO LEVEL 1)?',
+                description: 'This will erase all current habits, logs, XP, and streaks from this device and your Google Cloud sync. You will restart from Level 1 with a clean slate to begin your real habit journey.',
+                confirmLabel: 'YES, WIPE DATA & START FRESH',
+                isDestructive: true,
+                onConfirm: () => {
+                  playSound('gameover');
+                  onResetFreshData?.();
+                },
+              });
             }}
-            className="py-2 px-3 bg-rose-950/40 hover:bg-rose-900/60 border-2 border-rose-600 text-rose-400 text-[9px] font-arcade flex items-center justify-center space-x-1.5"
+            className="py-2 px-3 bg-red-950/60 hover:bg-red-900/80 border-2 border-red-500 text-red-300 text-[9px] font-arcade flex items-center justify-center space-x-1.5 active:translate-y-0.5 transition-all shadow-[2px_2px_0px_#000]"
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            <span>FACTORY RESET ROM</span>
+            <span>START FRESH (RESET LEVEL 1)</span>
+          </button>
+
+          <button
+            id="btn-reset-demo"
+            onClick={() => {
+              playSound('click');
+              setConfirmModal({
+                isOpen: true,
+                title: 'RELOAD 30-DAY DEMO SAVE?',
+                description: 'This will replace current save data with the 30-day pre-populated arcade dataset for testing, demos, and feature exploration.',
+                confirmLabel: 'RELOAD DEMO DATA',
+                isDestructive: false,
+                onConfirm: () => {
+                  playSound('gameover');
+                  onResetDemoData();
+                  showToast('🕹️ 30-DAY DEMO DATASET LOADED!');
+                },
+              });
+            }}
+            className="py-2 px-3 bg-[#1e1338] hover:bg-[#2c1b52] border-2 border-purple-500 text-purple-300 text-[9px] font-arcade flex items-center justify-center space-x-1.5 active:translate-y-0.5 transition-all shadow-[2px_2px_0px_#000]"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-purple-400" />
+            <span>RELOAD 30-DAY DEMO SAVE</span>
           </button>
         </div>
       </div>
+
+      {/* Floating In-App Toast Notification */}
+      {toastMessage && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 bg-slate-900 border-2 border-yellow-400 text-yellow-300 text-[10px] font-arcade shadow-[0px_4px_20px_rgba(0,0,0,0.8)] flex items-center space-x-2 animate-bounce max-w-[90vw] text-center">
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Retro Arcade Confirmation Modal */}
+      {confirmModal && confirmModal.isOpen && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-[#0f0826] border-2 border-yellow-400 p-5 max-w-sm w-full shadow-[6px_6px_0px_#000] relative">
+            <div className="flex items-center space-x-2 mb-3 border-b border-purple-800/80 pb-2">
+              <AlertTriangle className={`w-5 h-5 ${confirmModal.isDestructive ? 'text-red-400 animate-pulse' : 'text-yellow-400'}`} />
+              <h3 className={`text-[11px] font-arcade ${confirmModal.isDestructive ? 'text-red-400' : 'text-yellow-300'}`}>
+                {confirmModal.title}
+              </h3>
+            </div>
+
+            <p className="text-[10px] font-retro leading-relaxed text-slate-300 mb-5 bg-[#170e36] p-3 border border-purple-900/60">
+              {confirmModal.description}
+            </p>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  playSound('click');
+                  setConfirmModal(null);
+                }}
+                className="py-2 px-3 bg-[#1e1338] hover:bg-[#2e1d54] border-2 border-slate-600 text-slate-300 text-[9px] font-arcade flex items-center justify-center space-x-1 shadow-[2px_2px_0px_#000] active:translate-y-0.5"
+              >
+                <X className="w-3.5 h-3.5" />
+                <span>ABORT</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const cb = confirmModal.onConfirm;
+                  setConfirmModal(null);
+                  cb();
+                }}
+                className={`py-2 px-3 border-2 text-[9px] font-arcade flex items-center justify-center space-x-1 shadow-[2px_2px_0px_#000] active:translate-y-0.5 ${
+                  confirmModal.isDestructive
+                    ? 'bg-red-600 hover:bg-red-500 border-red-300 text-white'
+                    : 'bg-yellow-500 hover:bg-yellow-400 border-yellow-200 text-black font-bold'
+                }`}
+              >
+                <Check className="w-3.5 h-3.5" />
+                <span>{confirmModal.confirmLabel}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

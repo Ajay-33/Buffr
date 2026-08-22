@@ -39,6 +39,7 @@ export const HabitDetailModal: React.FC<HabitDetailModalProps> = ({
 }) => {
   const [pauseReasonInput, setPauseReasonInput] = useState('');
   const [showPauseInput, setShowPauseInput] = useState(false);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
 
   if (!isOpen || !habit) return null;
 
@@ -276,20 +277,45 @@ export const HabitDetailModal: React.FC<HabitDetailModalProps> = ({
               <span>{habit.isArchived ? 'RESTORE' : 'ARCHIVE'}</span>
             </button>
 
-            <button
-              id="detail-btn-delete"
-              onClick={() => {
-                playSound('click');
-                if (confirm(`Delete "${habit.title}" permanently from memory bank?`)) {
-                  onDeleteHabit(habit.id);
-                  onClose();
-                }
-              }}
-              className="py-2 px-2 bg-red-950 border border-red-500 text-[9px] font-arcade text-red-400 hover:bg-red-900 flex items-center justify-center space-x-1"
-            >
-              <Trash2 className="w-3 h-3" />
-              <span>DELETE</span>
-            </button>
+            {isConfirmingDelete ? (
+              <div className="flex items-center space-x-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    playSound('click');
+                    setIsConfirmingDelete(false);
+                  }}
+                  className="py-2 px-2 bg-slate-800 border border-slate-600 text-[9px] font-arcade text-slate-300 hover:bg-slate-700"
+                >
+                  ABORT
+                </button>
+                <button
+                  type="button"
+                  id="detail-btn-delete-confirm"
+                  onClick={() => {
+                    playSound('gameover');
+                    onDeleteHabit(habit.id);
+                    setIsConfirmingDelete(false);
+                    onClose();
+                  }}
+                  className="py-2 px-2 bg-red-600 border border-red-300 text-[9px] font-arcade text-white hover:bg-red-500 animate-pulse"
+                >
+                  PURGE!
+                </button>
+              </div>
+            ) : (
+              <button
+                id="detail-btn-delete"
+                onClick={() => {
+                  playSound('click');
+                  setIsConfirmingDelete(true);
+                }}
+                className="py-2 px-2 bg-red-950 border border-red-500 text-[9px] font-arcade text-red-400 hover:bg-red-900 flex items-center justify-center space-x-1"
+              >
+                <Trash2 className="w-3 h-3" />
+                <span>DELETE</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
