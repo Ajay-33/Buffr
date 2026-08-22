@@ -1,0 +1,227 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-arcade: 'Press Start 2P', monospace;
+    --font-pixel: 'Pixelify Sans', cursive, monospace;
+    --font-retro: 'VT323', monospace;
+    --font-cyber: 'Chakra Petch', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+  }
+
+  body {
+    font-family: var(--font-cyber), var(--font-sans);
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    background-color: #080312;
+    color: #f1f5f9;
+  }
+}
+
+.font-arcade {
+  font-family: 'Press Start 2P', monospace;
+}
+
+.font-pixel {
+  font-family: 'Pixelify Sans', cursive, monospace;
+}
+
+.font-retro {
+  font-family: 'VT323', monospace;
+}
+
+.font-cyber {
+  font-family: 'Chakra Petch', sans-serif;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Retro Arcade CRT Scanlines Effect */
+.crt-grid {
+  background-image: linear-gradient(rgba(18, 16, 38, 0) 50%, rgba(0, 0, 0, 0.35) 50%),
+                    linear-gradient(90deg, rgba(255, 0, 128, 0.03), rgba(0, 255, 234, 0.03));
+  background-size: 100% 4px, 6px 100%;
+}
+
+.crt-flicker {
+  animation: crtFlicker 0.15s infinite alternate;
+}
+
+@keyframes crtFlicker {
+  0% { opacity: 0.98; }
+  100% { opacity: 1; }
+}
+
+/* Retro Arcade 3D Chunky Buttons */
+.arcade-btn-yellow {
+  background: #facc15;
+  color: #0f172a;
+  border: 2px solid #ca8a04;
+  box-shadow: 0 4px 0 #854d0e, 0 6px 0 rgba(0,0,0,0.8);
+  transition: all 0.08s ease-in-out;
+}
+.arcade-btn-yellow:hover {
+  background: #fde047;
+}
+.arcade-btn-yellow:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #854d0e, 0 2px 0 rgba(0,0,0,0.8);
+}
+
+.arcade-btn-green {
+  background: #22c55e;
+  color: #022c22;
+  border: 2px solid #15803d;
+  box-shadow: 0 4px 0 #166534, 0 6px 0 rgba(0,0,0,0.8);
+  transition: all 0.08s ease-in-out;
+}
+.arcade-btn-green:hover {
+  background: #4ade80;
+}
+.arcade-btn-green:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #166534, 0 2px 0 rgba(0,0,0,0.8);
+}
+
+.arcade-btn-cyan {
+  background: #06b6d4;
+  color: #083344;
+  border: 2px solid #0891b2;
+  box-shadow: 0 4px 0 #0e7490, 0 6px 0 rgba(0,0,0,0.8);
+  transition: all 0.08s ease-in-out;
+}
+.arcade-btn-cyan:hover {
+  background: #22d3ee;
+}
+.arcade-btn-cyan:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #0e7490, 0 2px 0 rgba(0,0,0,0.8);
+}
+
+.arcade-btn-pink {
+  background: #ec4899;
+  color: #500724;
+  border: 2px solid #db2777;
+  box-shadow: 0 4px 0 #9d174d, 0 6px 0 rgba(0,0,0,0.8);
+  transition: all 0.08s ease-in-out;
+}
+.arcade-btn-pink:hover {
+  background: #f472b6;
+}
+.arcade-btn-pink:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #9d174d, 0 2px 0 rgba(0,0,0,0.8);
+}
+
+.arcade-btn-dark {
+  background: #1e1b4b;
+  color: #e0e7ff;
+  border: 2px solid #3730a3;
+  box-shadow: 0 4px 0 #1e1b4b, 0 6px 0 rgba(0,0,0,0.8);
+  transition: all 0.08s ease-in-out;
+}
+.arcade-btn-dark:hover {
+  background: #2e2870;
+}
+.arcade-btn-dark:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #1e1b4b, 0 2px 0 rgba(0,0,0,0.8);
+}
+
+/* Retro Arcade Container Box */
+.arcade-card {
+  background: #0f0a1e;
+  border: 2px solid #3b2d60;
+  box-shadow: 3px 3px 0px #05020a, 0 0 15px rgba(120, 50, 255, 0.08);
+}
+
+.arcade-card-glow-cyan {
+  border-color: #06b6d4;
+  box-shadow: 0 0 12px rgba(6, 182, 212, 0.3), 3px 3px 0px #042f2e;
+}
+
+.arcade-card-glow-green {
+  border-color: #22c55e;
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.3), 3px 3px 0px #022c22;
+}
+
+.arcade-card-glow-pink {
+  border-color: #ec4899;
+  box-shadow: 0 0 12px rgba(236, 72, 153, 0.3), 3px 3px 0px #500724;
+}
+
+.arcade-card-glow-yellow {
+  border-color: #eab308;
+  box-shadow: 0 0 12px rgba(234, 179, 8, 0.3), 3px 3px 0px #422006;
+}
+
+/* Pixel text & badges */
+.pixel-border {
+  border: 2px solid #4338ca;
+  box-shadow: 2px 2px 0px #1e1b4b;
+}
+
+.pixel-badge {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  line-height: 1.2;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* Arcade Neon Glows */
+.neon-text-green {
+  text-shadow: 0 0 8px rgba(34, 197, 94, 0.8), 0 0 16px rgba(34, 197, 94, 0.4);
+}
+.neon-text-cyan {
+  text-shadow: 0 0 8px rgba(6, 182, 212, 0.8), 0 0 16px rgba(6, 182, 212, 0.4);
+}
+.neon-text-pink {
+  text-shadow: 0 0 8px rgba(236, 72, 153, 0.8), 0 0 16px rgba(236, 72, 153, 0.4);
+}
+.neon-text-yellow {
+  text-shadow: 0 0 8px rgba(234, 179, 8, 0.8), 0 0 16px rgba(234, 179, 8, 0.4);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #080312;
+}
+::-webkit-scrollbar-thumb {
+  background: #3b2d60;
+  border: 1px solid #6366f1;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #6366f1;
+}
+
+@keyframes arcade-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+.animate-blink {
+  animation: arcade-blink 1s infinite;
+}
+
+@keyframes coin-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.animate-coin-float {
+  animation: coin-float 2s ease-in-out infinite;
+}
+
+/* Mobile Touch Tap Target Size Rule */
+.touch-target-min {
+  min-height: 44px;
+  min-width: 44px;
+}
