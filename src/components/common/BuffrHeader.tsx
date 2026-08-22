@@ -10,7 +10,7 @@ import {
   Heart,
   Cloud,
   CheckCircle2,
-  LogIn,
+  Sparkles,
   Loader2,
 } from 'lucide-react';
 import { UserProfile } from '../../types';
@@ -104,7 +104,7 @@ export const BuffrHeader: React.FC<BuffrHeaderProps> = ({
               className="flex items-center space-x-1 px-1.5 sm:px-2 py-1 bg-gradient-to-r from-blue-900 to-indigo-900 hover:from-blue-800 hover:to-indigo-800 border-2 border-cyan-400 text-cyan-200 text-[8px] sm:text-[10px] font-arcade shadow-[2px_2px_0px_#000] active:translate-y-0.5 transition-all"
               title="Sign in with Google to enable Real-time Cloud Save & Multi-Device Sync"
             >
-              <LogIn className="w-3 h-3 text-cyan-300" />
+              <Sparkles className="w-3 h-3 text-yellow-300 animate-pulse" />
               <span className="hidden xs:inline sm:inline">G-SYNC</span>
             </button>
           )}

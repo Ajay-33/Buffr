@@ -1,7 +1,7 @@
 # 🕹️ Buffr — Gamified Habit Tracker & Arcade HUD
 
 > **“Build your character by building your habits.”**  
-> A retro arcade-themed personal character progression system that turns daily discipline into XP, combo streaks, attribute levels, and boss quest victories.
+> A retro arcade-themed personal character progression system that turns daily discipline into XP, combo streaks, attribute levels, and boss quest victories. Powered by an offline-first architecture with real-time Firebase Cloud synchronization and Google Authentication.
 
 ---
 
@@ -10,7 +10,7 @@
 ### 🎮 Retro Arcade HUD & Aesthetic
 - **Pixel & CRT Arcade Styling**: High-contrast cyberpunk palette (`#090416` background, neon yellow `#facc15`, cyan `#06b6d4`, hot pink `#ec4899`, and emerald `#22c55e`).
 - **Procedural 8-Bit Chiptune Engine**: Pure Web Audio API procedural sound synthesizer for quest completions, power-ups, level ups, combos, and streak freeze protections.
-- **Haptic & Visual Feedback**: Confetti explosions, animated XP popups, and scanline overlay.
+- **Haptic & Visual Feedback**: Confetti explosions, animated XP popups, and CRT scanline overlays.
 
 ### ⚔️ Core Habit & Quest Engine
 - **Daily Quests & Checklists**: Filter by time of day (*Morning*, *Afternoon*, *Evening*, *Anytime*) or life pillar.
@@ -33,10 +33,16 @@
 - **Daily Reflection & Debrief**: End-of-day energy/mood check, daily win logs, and tactical upgrades.
 - **Stage Clear Weekly Review**: Automated 7-day review summarizing consistency rates, perfect days, top pillars, and coach takeaways.
 
-### 📱 Mobile PWA & Glance Widgets
-- **Standalone PWA Ready**: Installable to Android & iOS home screens with standalone fullscreen display and custom icon.
+### 🔥 Cloud Sync & Google Authentication
+- **Firebase Firestore Integration**: Real-time cloud database syncing habits, completions, XP transactions, reflections, and player level progression.
+- **Google Sign-In**: One-click Google Authentication with user-isolated subcollections (`/users/{userId}/*`).
+- **Offline-First Zero-Latency Engine**: Instant UI response via local storage with automatic background synchronization when online.
+- **Dedicated Distinct HUD Controls**: High-clarity arcade indicators for Cloud Sync (`G-SYNC`), active combo counters, and lives remaining.
+
+### 📱 Responsive Mobile Experience & Glance Widgets
+- **Adaptive Mobile Layout**: Automatically switches to an edge-to-edge, touch-optimized fullscreen view on mobile devices (`≤ 768px`) and offers an optional Android phone simulator frame on desktop.
 - **Android Glance HUD Simulator**: Live interactive preview of 2x2 compact and 4x2 quick-dispatch homescreen widgets.
-- **Instant Client-Side Persistence**: Offline-first storage with 0ms latency and full JSON backup export/import.
+- **Standalone PWA Ready**: Installable to Android & iOS home screens with standalone fullscreen display and custom icon.
 
 ---
 
@@ -46,12 +52,12 @@
 | :--- | :--- |
 | **Frontend** | React 19, TypeScript |
 | **Styling** | Tailwind CSS v4, Custom CSS Scanlines & Pixel Grid |
+| **Database & Auth** | Firebase Firestore, Firebase Authentication (Google Auth) |
 | **Typography** | `Press Start 2P`, `VT323`, `Pixelify Sans`, `Chakra Petch` |
 | **Sound FX** | Web Audio API (Procedural 8-Bit Chiptune Synthesizer) |
 | **Animations** | Motion (`motion/react`), Canvas Confetti |
 | **Icons** | Lucide React |
-| **Tooling** | Vite 6, TSX, ESLint |
-| **Deployment** | Google Cloud Run / Vercel / Netlify |
+| **Tooling & Build** | Vite 6, TSX, ESLint |
 
 ---
 
@@ -87,11 +93,10 @@ The compiled static assets will be in the `dist/` directory.
 
 ---
 
-## 💾 Data Backup & Restore
+## 💾 Cloud Sync & Data Backup
 
-- Go to **Profile** (top right avatar badge) ➔ **Backup & Security**.
-- Click **Export JSON Backup** to save your entire quest history, streak counts, reflections, and stats to a single `.json` file.
-- Click **Import JSON** on any new device to restore your character sheet instantly.
+- **Google Cloud Save**: Tap `G-SYNC` in the top header or navigate to **Profile ➔ Cloud Sync** to sign in with your Google account. All habits, streaks, and debriefs sync automatically across all devices.
+- **Memory Card (JSON)**: Go to **Profile** ➔ **Backup & Security** to export or import your raw JSON save state at any time.
 
 ---
 

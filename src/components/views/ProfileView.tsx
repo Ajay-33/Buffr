@@ -24,7 +24,7 @@ import {
   Terminal,
   Cloud,
   CheckCircle2,
-  LogIn,
+  KeyRound,
   LogOut,
   RefreshCw,
 } from 'lucide-react';
@@ -544,7 +544,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               disabled={loading}
               className="w-full py-2.5 px-3 bg-gradient-to-r from-blue-900 to-indigo-900 hover:from-blue-800 hover:to-indigo-800 border-2 border-cyan-400 text-cyan-100 text-[10px] font-arcade flex items-center justify-center space-x-2 shadow-[3px_3px_0px_#000]"
             >
-              <LogIn className="w-4 h-4 text-cyan-300" />
+              <KeyRound className="w-4 h-4 text-cyan-300 animate-pulse" />
               <span>CONNECT GOOGLE ACCOUNT & ENABLE CLOUD SYNC</span>
             </button>
           )}
