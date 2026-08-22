@@ -1,12 +1,19 @@
 {
   "short_name": "Buffr",
   "name": "Buffr — Gamified Habit Tracker & Arcade HUD",
+  "description": "Level up your life with habits, streaks, XP, attributes, quests, and analytics.",
   "icons": [
     {
       "src": "/icon.svg",
       "type": "image/svg+xml",
       "sizes": "192x192 512x512",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512",
+      "purpose": "maskable"
     }
   ],
   "start_url": "/",

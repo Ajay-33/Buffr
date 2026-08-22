@@ -1,0 +1,115 @@
+{
+  "entities": {
+    "users": {
+      "title": "User Profile",
+      "description": "User profile with level, XP, coins, streaks, and settings",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "avatarUrl": { "type": "string" },
+        "level": { "type": "number" },
+        "totalXp": { "type": "number" },
+        "currentXp": { "type": "number" },
+        "coins": { "type": "number" },
+        "streakFreezes": { "type": "number" },
+        "currentStreak": { "type": "number" },
+        "longestStreak": { "type": "number" },
+        "soundEnabled": { "type": "boolean" },
+        "crtScanlinesEnabled": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name"]
+    },
+    "habits": {
+      "title": "Habit",
+      "description": "Individual habit / quest item",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "icon": { "type": "string" },
+        "category": { "type": "string" },
+        "timeOfDay": { "type": "string" },
+        "trackingType": { "type": "string" },
+        "targetValue": { "type": "number" },
+        "unit": { "type": "string" },
+        "frequency": { "type": "string" },
+        "daysOfWeek": { "type": "array", "items": { "type": "number" } },
+        "xpReward": { "type": "number" },
+        "attributeId": { "type": "string" },
+        "difficulty": { "type": "string" },
+        "currentStreak": { "type": "number" },
+        "longestStreak": { "type": "number" },
+        "isPaused": { "type": "boolean" },
+        "isArchived": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "order": { "type": "number" }
+      },
+      "required": ["id", "userId", "title"]
+    },
+    "completions": {
+      "title": "Habit Completion",
+      "description": "Daily habit completion record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "habitId": { "type": "string" },
+        "dateStr": { "type": "string" },
+        "isCompleted": { "type": "boolean" },
+        "progressValue": { "type": "number" },
+        "completedAt": { "type": "string" },
+        "reasonMissed": { "type": "string" }
+      },
+      "required": ["id", "userId", "habitId", "dateStr"]
+    },
+    "reflections": {
+      "title": "Daily Reflection",
+      "description": "Daily debrief and win notes",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "dateStr": { "type": "string" },
+        "mood": { "type": "string" },
+        "energyLevel": { "type": "number" },
+        "dailyWin": { "type": "string" },
+        "notes": { "type": "string" },
+        "completedAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "dateStr"]
+    }
+  },
+  "firestore": {
+    "users": {
+      "/users/{userId}": {
+        "read": "request.auth != null && request.auth.uid == userId",
+        "write": "request.auth != null && request.auth.uid == userId"
+      },
+      "/users/{userId}/habits/{habitId}": {
+        "read": "request.auth != null && request.auth.uid == userId",
+        "write": "request.auth != null && request.auth.uid == userId"
+      },
+      "/users/{userId}/completions/{completionId}": {
+        "read": "request.auth != null && request.auth.uid == userId",
+        "write": "request.auth != null && request.auth.uid == userId"
+      },
+      "/users/{userId}/reflections/{reflectionId}": {
+        "read": "request.auth != null && request.auth.uid == userId",
+        "write": "request.auth != null && request.auth.uid == userId"
+      },
+      "/users/{userId}/quests/{questId}": {
+        "read": "request.auth != null && request.auth.uid == userId",
+        "write": "request.auth != null && request.auth.uid == userId"
+      },
+      "/users/{userId}/xp_transactions/{txId}": {
+        "read": "request.auth != null && request.auth.uid == userId",
+        "write": "request.auth != null && request.auth.uid == userId"
+      }
+    }
+  }
+}

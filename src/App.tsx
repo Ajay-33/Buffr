@@ -49,8 +49,12 @@ import {
   triggerHapticPulse,
 } from './utils/sound';
 import { HabitTemplate } from './data/initialData';
+import { useAuth } from './firebase/AuthContext';
+import { FirestoreSyncService } from './firebase/firestoreService';
 
 export default function App() {
+  const { currentUser } = useAuth();
+
   // App state
   const [activeTab, setActiveTab] = useState<'today' | 'calendar' | 'progress' | 'challenges' | 'profile'>('today');
   const [isDeviceFrameEnabled, setIsDeviceFrameEnabled] = useState(false);
@@ -64,6 +68,36 @@ export default function App() {
   const [achievements, setAchievements] = useState<Achievement[]>(() => BuffrStorage.getAchievements());
   const [xpTransactions, setXpTransactions] = useState<XPTransaction[]>(() => BuffrStorage.getXpTransactions());
   const [reflections, setReflections] = useState<DailyReflection[]>(() => BuffrStorage.getReflections());
+
+  // Real-time Cloud Firestore Subscription
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const unsubscribe = FirestoreSyncService.subscribeToUserData(currentUser.uid, (cloudData) => {
+      if (cloudData.user) {
+        setUser((prev) => {
+          const merged = { ...prev, ...cloudData.user };
+          BuffrStorage.saveUser(merged);
+          return merged;
+        });
+      }
+      if (cloudData.habits && cloudData.habits.length > 0) {
+        setHabits(cloudData.habits);
+        BuffrStorage.saveHabits(cloudData.habits);
+      }
+      if (cloudData.completions && cloudData.completions.length > 0) {
+        setCompletions(cloudData.completions);
+        BuffrStorage.saveCompletions(cloudData.completions);
+      }
+      if (cloudData.reflections && cloudData.reflections.length > 0) {
+        setReflections(cloudData.reflections);
+        BuffrStorage.saveReflections(cloudData.reflections);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [currentUser]);
+
 
   // Modals state
   const [isOnboardingOpen, setIsOnboardingOpen] = useState<boolean>(() => !BuffrStorage.hasCompletedOnboarding());
@@ -99,7 +133,11 @@ export default function App() {
     const nextUser = { ...user, ...updated };
     setUser(nextUser);
     BuffrStorage.saveUser(nextUser);
+    if (currentUser) {
+      FirestoreSyncService.saveUser(currentUser.uid, nextUser);
+    }
   };
+
 
   // Onboarding completion
   const handleFinishOnboarding = (selectedHabits: HabitTemplate[], userName: string) => {
@@ -246,6 +284,12 @@ export default function App() {
 
     // Check Quests & Achievements
     updateQuestsAndAchievements(nextCompletions, nextUser);
+
+    // Sync to Cloud Firestore if logged in
+    if (currentUser) {
+      FirestoreSyncService.saveCompletion(currentUser.uid, updatedComp);
+      FirestoreSyncService.saveUser(currentUser.uid, nextUser);
+    }
   };
 
   // Direct progress updates for count/duration/quantity habits
@@ -281,19 +325,30 @@ export default function App() {
         BuffrStorage.saveUser(nextUser);
         setUser(nextUser);
 
-        BuffrStorage.saveXPTransaction({
+        const tx: XPTransaction = {
           id: generateId('tx'),
           amount: h.xpReward,
           reason: `Target Reached: ${h.title}`,
           timestamp: new Date().toISOString(),
           habitId,
-        });
+        };
+        BuffrStorage.saveXPTransaction(tx);
         setXpTransactions(BuffrStorage.getXpTransactions());
         playCompletionSound();
         triggerHapticPulse('medium');
+
+        if (currentUser) {
+          FirestoreSyncService.saveUser(currentUser.uid, nextUser);
+          FirestoreSyncService.saveXPTransaction(currentUser.uid, tx);
+        }
       }
     }
+
+    if (currentUser) {
+      FirestoreSyncService.saveCompletion(currentUser.uid, updatedComp);
+    }
   };
+
 
   // Quests & Achievements verification engine
   const updateQuestsAndAchievements = (
@@ -387,13 +442,14 @@ export default function App() {
 
   // Habit CRUD Actions
   const handleSaveHabit = (habitData: Partial<Habit>) => {
+    let savedHabit: Habit;
     if (editingHabit) {
       // Update
-      const updatedHabit: Habit = { ...editingHabit, ...habitData } as Habit;
-      BuffrStorage.saveHabit(updatedHabit);
+      savedHabit = { ...editingHabit, ...habitData } as Habit;
+      BuffrStorage.saveHabit(savedHabit);
     } else {
       // Create
-      const newHabit: Habit = {
+      savedHabit = {
         id: generateId('habit'),
         title: habitData.title || 'New Habit',
         description: habitData.description,
@@ -416,7 +472,11 @@ export default function App() {
         isPaused: false,
         createdAt: new Date().toISOString(),
       };
-      BuffrStorage.saveHabit(newHabit);
+      BuffrStorage.saveHabit(savedHabit);
+    }
+
+    if (currentUser) {
+      FirestoreSyncService.saveHabit(currentUser.uid, savedHabit);
     }
 
     setHabits(BuffrStorage.getHabits());
@@ -449,6 +509,9 @@ export default function App() {
         createdAt: new Date().toISOString(),
       };
       BuffrStorage.saveHabit(newHabit);
+      if (currentUser) {
+        FirestoreSyncService.saveHabit(currentUser.uid, newHabit);
+      }
     });
 
     setHabits(BuffrStorage.getHabits());
@@ -466,6 +529,9 @@ export default function App() {
       pauseReason: !target.isPaused ? pauseReason : undefined,
     };
     BuffrStorage.saveHabit(nextHabit);
+    if (currentUser) {
+      FirestoreSyncService.saveHabit(currentUser.uid, nextHabit);
+    }
     setHabits(BuffrStorage.getHabits());
   };
 
@@ -478,11 +544,17 @@ export default function App() {
       isArchived: !target.isArchived,
     };
     BuffrStorage.saveHabit(nextHabit);
+    if (currentUser) {
+      FirestoreSyncService.saveHabit(currentUser.uid, nextHabit);
+    }
     setHabits(BuffrStorage.getHabits());
   };
 
   const handleDeleteHabit = (habitId: string) => {
     BuffrStorage.deleteHabit(habitId);
+    if (currentUser) {
+      FirestoreSyncService.deleteHabit(currentUser.uid, habitId);
+    }
     setHabits(BuffrStorage.getHabits());
   };
 
@@ -498,15 +570,23 @@ export default function App() {
     BuffrStorage.saveUser(nextUser);
     setUser(nextUser);
 
-    BuffrStorage.saveXPTransaction({
+    const tx: XPTransaction = {
       id: generateId('tx'),
       amount: 25,
       reason: 'Completed Daily Reflection Journal',
       timestamp: new Date().toISOString(),
-    });
+    };
+    BuffrStorage.saveXPTransaction(tx);
     setXpTransactions(BuffrStorage.getXpTransactions());
     playCelebrationSound();
+
+    if (currentUser) {
+      FirestoreSyncService.saveReflection(currentUser.uid, reflection);
+      FirestoreSyncService.saveUser(currentUser.uid, nextUser);
+      FirestoreSyncService.saveXPTransaction(currentUser.uid, tx);
+    }
   };
+
 
   // Render Inner Application Screens
   const renderViewContent = () => {
@@ -632,7 +712,7 @@ export default function App() {
         }}
         onSaveHabit={handleSaveHabit}
         onApplyRoutinePack={handleApplyRoutinePack}
-        initialHabit={editingHabit}
+        editingHabit={editingHabit}
       />
 
       <HabitDetailModal

@@ -22,12 +22,19 @@ import {
   FileText,
   Gamepad2,
   Terminal,
+  Cloud,
+  CheckCircle2,
+  LogIn,
+  LogOut,
+  RefreshCw,
 } from 'lucide-react';
 import { Habit, UserProfile, XPTransaction } from '../../types';
 import { UNLOCKED_TITLES_POOL } from '../../data/initialData';
 import { calculateLevelFromTotalXp } from '../../utils/gamification';
 import { exportDataAsJson, exportCompletionsAsCsv, importDataFromJson } from '../../storage/db';
 import { playSound } from '../../utils/sound';
+import { useAuth } from '../../firebase/AuthContext';
+
 
 interface ProfileViewProps {
   user: UserProfile;
@@ -60,6 +67,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [nameInput, setNameInput] = useState(user.name);
   const [habitFilter, setHabitFilter] = useState<'all' | 'active' | 'paused' | 'archived'>('all');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { currentUser, syncStatus, signInWithGoogle, signOut, syncNow, loading } = useAuth();
 
   const levelInfo = calculateLevelFromTotalXp(user.totalXp);
 
@@ -469,6 +477,77 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <Smartphone className="w-4 h-4 text-cyan-400" />
             <span>LAUNCH ANDROID DESKTOP WIDGET PREVIEW</span>
           </button>
+        </div>
+      </div>
+
+      {/* Google Cloud Account & Realtime Database Sync */}
+      <div className="p-3.5 sm:p-5 bg-[#11092a] border-2 border-cyan-500/80 shadow-[3px_3px_0px_#05020a] space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Cloud className="w-5 h-5 text-cyan-400" />
+            <h2 className="text-xs sm:text-sm font-arcade text-cyan-300">
+              CLOUD SYNC & GOOGLE AUTH
+            </h2>
+          </div>
+          {currentUser ? (
+            <span className="px-2 py-0.5 text-[8px] font-arcade bg-emerald-500/20 text-emerald-300 border border-emerald-500">
+              CLOUD CONNECTED
+            </span>
+          ) : (
+            <span className="px-2 py-0.5 text-[8px] font-arcade bg-slate-800 text-slate-400 border border-slate-700">
+              OFFLINE / LOCAL ONLY
+            </span>
+          )}
+        </div>
+
+        <p className="text-xs text-slate-300 font-retro">
+          {currentUser
+            ? `Logged in as ${currentUser.displayName || currentUser.email || 'Player'}. Your habits, XP, streaks, and reflections sync to Firebase Firestore in real-time across all your phones and computers.`
+            : 'Sign in with Google to enable automatic cloud backup and real-time synchronization between your phone, laptop, and tablet.'}
+        </p>
+
+        <div className="flex flex-wrap gap-2 pt-1">
+          {currentUser ? (
+            <>
+              <button
+                id="btn-cloud-sync-now"
+                onClick={() => {
+                  playSound('powerup');
+                  syncNow();
+                }}
+                disabled={syncStatus === 'syncing'}
+                className="py-2 px-3 bg-[#0e2a22] hover:bg-[#143d32] border-2 border-emerald-400 text-emerald-200 text-[9px] font-arcade flex items-center space-x-1.5 shadow-[2px_2px_0px_#000]"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 text-emerald-400 ${syncStatus === 'syncing' ? 'animate-spin' : ''}`} />
+                <span>{syncStatus === 'syncing' ? 'SYNCING TO CLOUD...' : 'FORCE CLOUD SYNC'}</span>
+              </button>
+
+              <button
+                id="btn-google-signout"
+                onClick={() => {
+                  playSound('click');
+                  signOut();
+                }}
+                className="py-2 px-3 bg-[#241124] hover:bg-[#3d1a3d] border-2 border-pink-500 text-pink-300 text-[9px] font-arcade flex items-center space-x-1.5 shadow-[2px_2px_0px_#000]"
+              >
+                <LogOut className="w-3.5 h-3.5 text-pink-400" />
+                <span>SIGN OUT ({currentUser.email?.split('@')[0] || 'ACCOUNT'})</span>
+              </button>
+            </>
+          ) : (
+            <button
+              id="btn-google-signin"
+              onClick={() => {
+                playSound('powerup');
+                signInWithGoogle();
+              }}
+              disabled={loading}
+              className="w-full py-2.5 px-3 bg-gradient-to-r from-blue-900 to-indigo-900 hover:from-blue-800 hover:to-indigo-800 border-2 border-cyan-400 text-cyan-100 text-[10px] font-arcade flex items-center justify-center space-x-2 shadow-[3px_3px_0px_#000]"
+            >
+              <LogIn className="w-4 h-4 text-cyan-300" />
+              <span>CONNECT GOOGLE ACCOUNT & ENABLE CLOUD SYNC</span>
+            </button>
+          )}
         </div>
       </div>
 
