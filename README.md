@@ -39,10 +39,10 @@
 - **Offline-First Zero-Latency Engine**: Instant UI response via local storage with automatic background synchronization when online.
 - **Dedicated Distinct HUD Controls**: High-clarity arcade indicators for Cloud Sync (`G-SYNC`), active combo counters, and lives remaining.
 
-### 📱 Responsive Mobile Experience & Glance Widgets
-- **Adaptive Mobile Layout**: Automatically switches to an edge-to-edge, touch-optimized fullscreen view on mobile devices (`≤ 768px`) and offers an optional Android phone simulator frame on desktop.
-- **Android Glance HUD Simulator**: Live interactive preview of 2x2 compact and 4x2 quick-dispatch homescreen widgets.
-- **Standalone PWA Ready**: Installable to Android & iOS home screens with standalone fullscreen display and custom icon.
+### 📱 Responsive Mobile Experience & PWA Shortcuts
+- **Adaptive Mobile Layout**: Automatically switches to an edge-to-edge, touch-optimized fullscreen view on mobile devices (`≤ 768px`) and offers an optional device frame toggle on desktop.
+- **Standalone PWA Ready**: Installable to Android & iOS home screens with standalone fullscreen display, offline caching, and custom app icons.
+- **Android Long-Press Quick Launchers**: 1-tap launcher shortcuts on supported home screens to jump straight into **Today's Quests** or **Daily Debrief**.
 
 ---
 
