@@ -10,8 +10,17 @@ import {
   Target,
   Clock,
   Shield,
+  ShieldAlert,
   Swords,
   Skull,
+  Footprints,
+  Crown,
+  Award,
+  BookOpen,
+  Dumbbell,
+  Star,
+  TrendingUp,
+  Heart,
 } from 'lucide-react';
 import { Challenge, Quest, Achievement, UserProfile } from '../../types';
 import { playSound } from '../../utils/sound';
@@ -26,6 +35,29 @@ interface ChallengesViewProps {
   onCreateCustomChallenge: (challenge: Partial<Challenge>) => void;
 }
 
+// Map text icon names to real Lucide icons with fallback
+const getTrophyLucideIcon = (iconName?: string): React.ElementType => {
+  if (!iconName) return Trophy;
+  const lower = iconName.toLowerCase().replace(/[-_\s]/g, '');
+  if (lower.includes('footprint') || lower.includes('step')) return Footprints;
+  if (lower.includes('flame') || lower.includes('fire')) return Flame;
+  if (lower.includes('shieldalert')) return ShieldAlert;
+  if (lower.includes('shield')) return Shield;
+  if (lower.includes('crown')) return Crown;
+  if (lower.includes('sparkle')) return Sparkles;
+  if (lower.includes('award') || lower.includes('medal')) return Award;
+  if (lower.includes('book') || lower.includes('scholar')) return BookOpen;
+  if (lower.includes('dumbbell') || lower.includes('athlete') || lower.includes('fitness')) return Dumbbell;
+  if (lower.includes('checkcircle') || lower.includes('centurion') || lower.includes('check')) return CheckCircle2;
+  if (lower.includes('target')) return Target;
+  if (lower.includes('zap') || lower.includes('lightning')) return Zap;
+  if (lower.includes('star')) return Star;
+  if (lower.includes('sword')) return Swords;
+  if (lower.includes('heart')) return Heart;
+  if (lower.includes('trend')) return TrendingUp;
+  return Trophy;
+};
+
 export const ChallengesView: React.FC<ChallengesViewProps> = ({
   user,
   challenges,
@@ -37,6 +69,7 @@ export const ChallengesView: React.FC<ChallengesViewProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'challenges' | 'quests' | 'achievements'>('challenges');
   const [showCreateChallenge, setShowCreateChallenge] = useState(false);
+  const [trophyFilter, setTrophyFilter] = useState<'all' | 'unlocked' | 'locked' | 'streaks' | 'completion' | 'xp' | 'levels' | 'categories'>('all');
 
   // Form state for custom challenge
   const [customTitle, setCustomTitle] = useState('');
@@ -396,99 +429,226 @@ export const ChallengesView: React.FC<ChallengesViewProps> = ({
       {/* TAB 3: Achievements Hall of Fame */}
       {activeTab === 'achievements' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-arcade tracking-wider text-cyan-400">
-              HALL OF GLORY: TROPHY ROOM
-            </span>
-            <span className="text-[10px] font-arcade text-yellow-400 font-bold">
-              {unlockedCount}/{achievements.length} UNLOCKED
-            </span>
+          {/* Trophy Room Arcade Header & Stats */}
+          <div className="bg-[#11092a] border-2 border-yellow-400 p-4 shadow-[3px_3px_0px_#05020a] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-yellow-400 border-2 border-yellow-200 text-black flex items-center justify-center shadow-[2px_2px_0px_#000]">
+                <Trophy className="w-6 h-6 fill-yellow-400 text-black stroke-[2.5]" />
+              </div>
+              <div>
+                <h3 className="text-xs sm:text-sm font-arcade text-yellow-300">
+                  HALL OF GLORY: TROPHY ROOM
+                </h3>
+                <p className="text-[10px] font-retro text-cyan-300">
+                  Unlock prestigious arcade trophies and medals by achieving unbroken streaks & mastery
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <div className="px-2.5 py-1 bg-[#1a0f35] border border-yellow-400/70 text-right">
+                <span className="text-[8px] font-arcade text-slate-400 block">COLLECTED</span>
+                <span className="text-xs font-arcade text-yellow-400 font-bold">
+                  {unlockedCount} / {achievements.length}
+                </span>
+              </div>
+              <div className="px-2.5 py-1 bg-[#1a0f35] border border-cyan-400/70 text-right">
+                <span className="text-[8px] font-arcade text-slate-400 block">COMPLETION</span>
+                <span className="text-xs font-arcade text-cyan-300 font-bold">
+                  {Math.round((unlockedCount / Math.max(1, achievements.length)) * 100)}%
+                </span>
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
-            {achievements.map((ach) => {
-              const progressPct = Math.min(100, Math.round((ach.progress / ach.target) * 100));
+          {/* Trophy Filter Tags */}
+          <div className="flex flex-wrap gap-1.5 pb-1">
+            {[
+              { id: 'all', label: `ALL (${achievements.length})` },
+              { id: 'unlocked', label: `UNLOCKED (${unlockedCount})` },
+              { id: 'locked', label: `LOCKED (${achievements.length - unlockedCount})` },
+              { id: 'streaks', label: 'STREAKS' },
+              { id: 'completion', label: 'COMPLETION' },
+              { id: 'xp', label: 'XP & LEVELS' },
+              { id: 'categories', label: 'MASTERY' },
+            ].map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => {
+                  playSound('click');
+                  setTrophyFilter(f.id as any);
+                }}
+                className={`px-2 py-1 text-[9px] font-arcade border transition-all ${
+                  trophyFilter === f.id
+                    ? 'bg-yellow-400 text-black border-yellow-300 font-bold shadow-[2px_2px_0px_#000]'
+                    : 'bg-[#120a28] hover:bg-[#201344] text-slate-300 border-[#3b2d60]'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
 
-              const tierColors: Record<string, string> = {
-                bronze: '#cd7f32',
-                silver: '#cbd5e1',
-                gold: '#fbbf24',
-                diamond: '#38bdf8',
-              };
+          {/* Trophy Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {achievements
+              .filter((ach) => {
+                if (trophyFilter === 'unlocked') return ach.isUnlocked;
+                if (trophyFilter === 'locked') return !ach.isUnlocked;
+                if (trophyFilter === 'streaks')
+                  return ach.category === 'Streaks' || ach.id.includes('streak') || ach.id.includes('momentum') || ach.id.includes('fire');
+                if (trophyFilter === 'completion')
+                  return ach.category === 'Completion' || ach.id.includes('step') || ach.id.includes('centurion');
+                if (trophyFilter === 'xp')
+                  return ach.category === 'XP' || ach.category === 'Levels' || ach.id.includes('xp') || ach.id.includes('level');
+                if (trophyFilter === 'categories')
+                  return (
+                    ach.category === 'Categories' ||
+                    ach.id.includes('scholar') ||
+                    ach.id.includes('athlete') ||
+                    ach.id.includes('zen')
+                  );
+                return true;
+              })
+              .map((ach) => {
+                const currentVal = ach.progress !== undefined ? ach.progress : (ach.current !== undefined ? ach.current : (ach.isUnlocked ? ach.target : 0));
+                const progressPct = Math.min(100, Math.round((currentVal / (ach.target || 1)) * 100));
+                const tier = ach.tier || ach.badgeRarity || 'bronze';
 
-              return (
-                <div
-                  key={ach.id}
-                  id={`ach-card-${ach.id}`}
-                  className={`p-3.5 border-2 flex items-center space-x-3 transition-all ${
-                    ach.isUnlocked
-                      ? 'bg-[#11092a] border-[#553c90] shadow-[2px_2px_0px_#05020a]'
-                      : 'bg-[#090416] border-[#22173d] opacity-75'
-                  }`}
-                >
+                const tierMeta: Record<
+                  string,
+                  { color: string; bg: string; border: string; label: string; glow: string }
+                > = {
+                  bronze: {
+                    color: '#f97316',
+                    bg: '#2b1408',
+                    border: '#ea580c',
+                    label: 'BRONZE',
+                    glow: 'shadow-[0_0_10px_rgba(234,88,12,0.3)]',
+                  },
+                  silver: {
+                    color: '#e2e8f0',
+                    bg: '#1e293b',
+                    border: '#cbd5e1',
+                    label: 'SILVER',
+                    glow: 'shadow-[0_0_10px_rgba(203,213,225,0.3)]',
+                  },
+                  gold: {
+                    color: '#facc15',
+                    bg: '#2d1e05',
+                    border: '#eab308',
+                    label: 'GOLD',
+                    glow: 'shadow-[0_0_12px_rgba(234,179,8,0.4)]',
+                  },
+                  diamond: {
+                    color: '#38bdf8',
+                    bg: '#082f49',
+                    border: '#0284c7',
+                    label: 'DIAMOND',
+                    glow: 'shadow-[0_0_15px_rgba(56,189,248,0.5)]',
+                  },
+                  legendary: {
+                    color: '#c084fc',
+                    bg: '#3b0764',
+                    border: '#a855f7',
+                    label: 'LEGENDARY',
+                    glow: 'shadow-[0_0_15px_rgba(168,85,247,0.5)]',
+                  },
+                };
+
+                const tierInfo = tierMeta[tier] || tierMeta.bronze;
+                const IconComponent = getTrophyLucideIcon(ach.icon);
+
+                return (
                   <div
-                    className={`w-11 h-11 flex items-center justify-center text-2xl shrink-0 border-2 relative ${
-                      ach.isUnlocked ? 'bg-[#090416]' : 'bg-[#05020c] grayscale'
+                    key={ach.id}
+                    id={`ach-card-${ach.id}`}
+                    className={`p-3.5 border-2 flex items-center space-x-3.5 transition-all relative ${
+                      ach.isUnlocked
+                        ? 'bg-[#130b2e] border-[#553c90] shadow-[3px_3px_0px_#05020a]'
+                        : 'bg-[#090416] border-[#22173d] opacity-75'
                     }`}
-                    style={{ borderColor: tierColors[ach.tier] || '#64748b' }}
                   >
-                    <span>{ach.icon}</span>
-                    {!ach.isUnlocked && (
-                      <div className="absolute inset-0 bg-black/70 flex items-center justify-center text-slate-400">
-                        <Lock className="w-3.5 h-3.5" />
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <h4
-                        className={`text-[11px] sm:text-xs font-arcade truncate ${
-                          ach.isUnlocked ? 'text-yellow-300' : 'text-slate-400'
+                    {/* Trophy Icon Pedestal with Real Lucide Icon */}
+                    <div
+                      className={`w-12 h-12 flex items-center justify-center shrink-0 border-2 relative transition-all ${
+                        ach.isUnlocked ? tierInfo.glow : 'grayscale'
+                      }`}
+                      style={{
+                        backgroundColor: ach.isUnlocked ? tierInfo.bg : '#05020c',
+                        borderColor: ach.isUnlocked ? tierInfo.border : '#332454',
+                      }}
+                    >
+                      <IconComponent
+                        className={`w-6 h-6 stroke-[2.2] transition-transform ${
+                          ach.isUnlocked ? 'scale-110' : 'text-slate-500'
                         }`}
-                      >
-                        {ach.title}
-                      </h4>
-                      <span
-                        className="text-[8px] uppercase font-arcade px-1 py-0.2 border"
-                        style={{
-                          color: tierColors[ach.tier],
-                          borderColor: `${tierColors[ach.tier]}80`,
-                        }}
-                      >
-                        {ach.tier}
-                      </span>
-                    </div>
+                        style={{ color: ach.isUnlocked ? tierInfo.color : '#64748b' }}
+                      />
 
-                    <p className="text-xs text-slate-300 font-retro truncate mt-0.5">{ach.description}</p>
-
-                    <div className="mt-1.5">
-                      {ach.isUnlocked ? (
-                        <span className="text-[9px] text-green-400 font-arcade flex items-center space-x-1">
-                          <CheckCircle2 className="w-3 h-3" />
-                          <span>UNLOCKED • +{ach.xpReward} PTS</span>
-                        </span>
-                      ) : (
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-[8px] font-arcade text-slate-400">
-                            <span>PROGRESS</span>
-                            <span>
-                              {ach.progress}/{ach.target}
-                            </span>
-                          </div>
-                          <div className="w-full bg-[#05020c] border border-[#3b2d60] h-2 p-0.5">
-                            <div
-                              className="bg-cyan-400 h-full"
-                              style={{ width: `${progressPct}%` }}
-                            />
-                          </div>
+                      {!ach.isUnlocked && (
+                        <div className="absolute inset-0 bg-black/75 flex items-center justify-center text-slate-400">
+                          <Lock className="w-4 h-4 text-slate-400" />
                         </div>
                       )}
                     </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1">
+                        <h4
+                          className={`text-xs font-arcade truncate ${
+                            ach.isUnlocked ? 'text-yellow-300 font-bold' : 'text-slate-400'
+                          }`}
+                        >
+                          {ach.title}
+                        </h4>
+                        <span
+                          className="text-[8px] uppercase font-arcade px-1.5 py-0.5 border font-bold"
+                          style={{
+                            color: tierInfo.color,
+                            backgroundColor: `${tierInfo.color}15`,
+                            borderColor: tierInfo.border,
+                          }}
+                        >
+                          {tierInfo.label}
+                        </span>
+                      </div>
+
+                      <p className="text-[11px] text-slate-300 font-retro leading-tight mt-0.5 line-clamp-2">
+                        {ach.description}
+                      </p>
+
+                      <div className="mt-2">
+                        {ach.isUnlocked ? (
+                          <div className="flex items-center justify-between text-[9px] font-arcade">
+                            <span className="text-emerald-400 flex items-center space-x-1">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                              <span>UNLOCKED</span>
+                            </span>
+                            <span className="text-yellow-400">+{ach.xpReward} PTS</span>
+                          </div>
+                        ) : (
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-[8px] font-arcade text-slate-400">
+                              <span>PROGRESS</span>
+                              <span className="text-cyan-300">
+                                {currentVal} / {ach.target} ({progressPct}%)
+                              </span>
+                            </div>
+                            <div className="w-full bg-[#05020c] border border-[#3b2d60] h-2 p-0.5">
+                              <div
+                                className="bg-gradient-to-r from-cyan-500 to-blue-500 h-full"
+                                style={{ width: `${progressPct}%` }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
           </div>
         </div>
       )}

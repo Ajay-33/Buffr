@@ -24,12 +24,21 @@ interface CalendarViewProps {
   habits: Habit[];
   completions: HabitCompletion[];
   reflections: DailyReflection[];
+  onToggleHabit?: (habitId: string, targetDateStr?: string) => void;
+  onUpdateHabitProgress?: (
+    habitId: string,
+    progressValue: number,
+    isCompleted: boolean,
+    targetDateStr?: string
+  ) => void;
 }
 
 export const CalendarView: React.FC<CalendarViewProps> = ({
   habits,
   completions,
   reflections,
+  onToggleHabit,
+  onUpdateHabitProgress,
 }) => {
   const today = new Date();
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
@@ -310,36 +319,55 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           {scheduledForSelected.length === 0 ? (
             <p className="text-xs text-cyan-300 font-retro py-2">NO MISSIONS LOGGED ON THIS CYCLE.</p>
           ) : (
-            scheduledForSelected.map(({ habit, isCompleted, reasonMissed }) => (
+            scheduledForSelected.map(({ habit, isCompleted, progressValue, reasonMissed }) => (
               <div
                 key={habit.id}
-                className={`p-2.5 sm:p-3 border-2 flex items-center justify-between ${
+                className={`p-2.5 sm:p-3 border-2 flex items-center justify-between transition-all ${
                   isCompleted
                     ? 'bg-[#0d1f18] border-emerald-500 text-green-300 shadow-[2px_2px_0px_#000]'
                     : 'bg-[#0e0722] border-[#2f2352] text-slate-400'
                 }`}
               >
-                <div className="flex items-center space-x-2.5 truncate">
-                  <span className="text-base sm:text-lg">{habit.emoji}</span>
+                <div className="flex items-center space-x-2.5 truncate flex-1 min-w-0 mr-2">
+                  <span className="text-base sm:text-lg shrink-0">{habit.emoji}</span>
                   <div className="truncate">
-                    <span className="text-[11px] sm:text-xs font-arcade text-white block truncate">{habit.title}</span>
+                    <span className={`text-[11px] sm:text-xs font-arcade block truncate ${isCompleted ? 'text-green-300' : 'text-white'}`}>
+                      {habit.title}
+                    </span>
                     <span className="text-[10px] text-cyan-300 font-retro">
                       {habit.category} • +{habit.xpReward} PTS
+                      {habit.habitType === 'quantity' && (
+                        <span className="ml-1 text-yellow-300">
+                          ({progressValue.toLocaleString()}/{habit.targetValue.toLocaleString()} {habit.unit || ''})
+                        </span>
+                      )}
                     </span>
                   </div>
                 </div>
 
                 <div className="flex items-center space-x-2 shrink-0">
-                  {isCompleted ? (
-                    <div className="flex items-center space-x-1 text-green-400 text-[10px] font-arcade">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>CLEARED</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center space-x-1 text-red-400 text-[10px] font-arcade">
-                      <XCircle className="w-3.5 h-3.5" />
-                      <span>{reasonMissed ? reasonMissed.toUpperCase() : 'MISSED'}</span>
-                    </div>
+                  {onToggleHabit && (
+                    <button
+                      type="button"
+                      onClick={() => onToggleHabit(habit.id, selectedDateStr)}
+                      className={`px-2.5 py-1 text-[9px] font-arcade border flex items-center space-x-1 shadow-[1px_1px_0px_#000] active:translate-y-0.5 transition-all ${
+                        isCompleted
+                          ? 'bg-emerald-500 hover:bg-emerald-400 text-black border-emerald-300 font-bold'
+                          : 'bg-[#1b1038] hover:bg-[#2c1a58] text-yellow-300 border-[#553c90]'
+                      }`}
+                      title={isCompleted ? 'Mark missed' : `Complete for ${selectedDateStr}`}
+                    >
+                      {isCompleted ? (
+                        <>
+                          <CheckCircle2 className="w-3 h-3" />
+                          <span>CLEARED</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>+ LOG WORK</span>
+                        </>
+                      )}
+                    </button>
                   )}
                 </div>
               </div>

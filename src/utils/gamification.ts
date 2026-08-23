@@ -624,53 +624,74 @@ export const checkAchievementsUnlock = (
   user: UserProfile,
   achievements: Achievement[]
 ): Achievement[] => {
-  const totalCompletedCount = completions.filter((c) => c.isCompleted).length;
+  const completedCompletions = completions.filter((c) => c.isCompleted);
+  const totalCompletedCount = completedCompletions.length;
   const streakStats = calculateOverallStreak(habits, completions);
 
+  // Category counts
+  const categoryCompletedCounts: Record<string, number> = {};
+  completedCompletions.forEach((c) => {
+    const habit = habits.find((h) => h.id === c.habitId);
+    if (habit) {
+      categoryCompletedCounts[habit.category] = (categoryCompletedCounts[habit.category] || 0) + 1;
+    }
+  });
+
   return achievements.map((ach) => {
-    let progress = ach.progress;
+    let progress = ach.progress ?? ach.current ?? 0;
     let isUnlocked = ach.isUnlocked;
 
-    switch (ach.id) {
-      case 'ach-first-step':
-        progress = totalCompletedCount;
-        if (progress >= 1 && !isUnlocked) isUnlocked = true;
-        break;
-      case 'ach-streak-3':
-        progress = user.currentStreak;
-        if (progress >= 3 && !isUnlocked) isUnlocked = true;
-        break;
-      case 'ach-streak-7':
-        progress = user.currentStreak;
-        if (progress >= 7 && !isUnlocked) isUnlocked = true;
-        break;
-      case 'ach-streak-30':
-        progress = user.currentStreak;
-        if (progress >= 30 && !isUnlocked) isUnlocked = true;
-        break;
-      case 'ach-level-5':
-        progress = user.level;
-        if (progress >= 5 && !isUnlocked) isUnlocked = true;
-        break;
-      case 'ach-level-10':
-        progress = user.level;
-        if (progress >= 10 && !isUnlocked) isUnlocked = true;
-        break;
-      case 'ach-perfect-week':
-        progress = streakStats.perfectDaysCount;
-        if (progress >= 7 && !isUnlocked) isUnlocked = true;
-        break;
-      case 'ach-century':
-        progress = totalCompletedCount;
-        if (progress >= 100 && !isUnlocked) isUnlocked = true;
-        break;
-      default:
-        break;
+    const achKey = (ach.code || ach.id).toLowerCase();
+
+    if (achKey.includes('first_step') || achKey.includes('first-step')) {
+      progress = totalCompletedCount;
+      if (progress >= (ach.target || 1)) isUnlocked = true;
+    } else if (achKey.includes('momentum') || achKey.includes('streak-3') || achKey.includes('streak_3')) {
+      progress = Math.max(user.currentStreak, user.longestStreak || 0);
+      if (progress >= (ach.target || 3)) isUnlocked = true;
+    } else if (achKey.includes('on_fire') || achKey.includes('streak-7') || achKey.includes('streak_7')) {
+      progress = Math.max(user.currentStreak, user.longestStreak || 0);
+      if (progress >= (ach.target || 7)) isUnlocked = true;
+    } else if (achKey.includes('unstoppable') || achKey.includes('streak-30') || achKey.includes('streak_30')) {
+      progress = Math.max(user.currentStreak, user.longestStreak || 0);
+      if (progress >= (ach.target || 30)) isUnlocked = true;
+    } else if (achKey.includes('century') || achKey.includes('century_club') || achKey.includes('streak-100')) {
+      progress = Math.max(user.currentStreak, user.longestStreak || 0);
+      if (progress >= (ach.target || 100)) isUnlocked = true;
+    } else if (achKey.includes('perfect_week') || achKey.includes('perfect-week')) {
+      progress = Math.max(user.perfectDaysCount || 0, streakStats.perfectDaysCount);
+      if (progress >= (ach.target || 7)) isUnlocked = true;
+    } else if (achKey.includes('xp_hunter') || achKey.includes('xp-hunter')) {
+      progress = user.totalXp;
+      if (progress >= (ach.target || 2500)) isUnlocked = true;
+    } else if (achKey.includes('buffr_10') || achKey.includes('level-10') || achKey.includes('level_10')) {
+      progress = user.level;
+      if (progress >= (ach.target || 10)) isUnlocked = true;
+    } else if (achKey.includes('level-5') || achKey.includes('level_5')) {
+      progress = user.level;
+      if (progress >= (ach.target || 5)) isUnlocked = true;
+    } else if (achKey.includes('scholar')) {
+      progress = (categoryCompletedCounts['Mind'] || 0) + (categoryCompletedCounts['Discipline'] || 0);
+      if (progress >= (ach.target || 50)) isUnlocked = true;
+    } else if (achKey.includes('athlete')) {
+      progress = categoryCompletedCounts['Fitness'] || 0;
+      if (progress >= (ach.target || 50)) isUnlocked = true;
+    } else if (achKey.includes('zen_master') || achKey.includes('zen-master')) {
+      progress = (categoryCompletedCounts['Mindfulness'] || 0) + (categoryCompletedCounts['Health'] || 0);
+      if (progress >= (ach.target || 30)) isUnlocked = true;
+    } else if (achKey.includes('centurion')) {
+      progress = totalCompletedCount;
+      if (progress >= (ach.target || 100)) isUnlocked = true;
+    } else {
+      if (progress >= ach.target && ach.target > 0) {
+        isUnlocked = true;
+      }
     }
 
     return {
       ...ach,
       progress: Math.min(ach.target, progress),
+      current: Math.min(ach.target, progress),
       isUnlocked,
       unlockedAt: isUnlocked && !ach.unlockedAt ? new Date().toISOString() : ach.unlockedAt,
     };

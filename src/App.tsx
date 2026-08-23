@@ -204,14 +204,15 @@ export default function App() {
     setIsOnboardingOpen(true);
   };
 
-  // Habit Toggle / Completion Progression Engine
-  const handleToggleHabit = (habitId: string) => {
-    const todayStr = getTodayStr();
+  // Habit Toggle / Completion Progression Engine (Supports retroactive date logging for yesterday/past days)
+  const handleToggleHabit = (habitId: string, targetDateStr?: string) => {
+    const activeDateStr = targetDateStr || getTodayStr();
+    const isPastDate = activeDateStr !== getTodayStr();
     const targetHabit = habits.find((h) => h.id === habitId);
     if (!targetHabit) return;
 
     const existingComp = completions.find(
-      (c) => c.habitId === habitId && c.dateStr === todayStr
+      (c) => c.habitId === habitId && c.dateStr === activeDateStr
     );
 
     const willBeCompleted = existingComp ? !existingComp.isCompleted : true;
@@ -220,7 +221,7 @@ export default function App() {
     const updatedComp: HabitCompletion = {
       id: existingComp ? existingComp.id : generateId('comp'),
       habitId,
-      dateStr: todayStr,
+      dateStr: activeDateStr,
       isCompleted: willBeCompleted,
       progressValue: progressVal,
       completedAt: willBeCompleted ? new Date().toISOString() : undefined,
@@ -241,7 +242,9 @@ export default function App() {
       const tx: XPTransaction = {
         id: generateId('tx'),
         amount: earnedXp,
-        reason: `Completed: ${targetHabit.title} ${streakBonus > 0 ? `(+${streakBonus} Streak Bonus)` : ''}`,
+        reason: isPastDate
+          ? `Backfilled: ${targetHabit.title} (${activeDateStr})`
+          : `Completed: ${targetHabit.title} ${streakBonus > 0 ? `(+${streakBonus} Streak Bonus)` : ''}`,
         timestamp: new Date().toISOString(),
         habitId,
       };
@@ -286,7 +289,7 @@ export default function App() {
 
     // Check Perfect Day 100% Score
     if (willBeCompleted) {
-      const dayStats = calculateDailyScore(habits, nextCompletions, todayStr);
+      const dayStats = calculateDailyScore(habits, nextCompletions, activeDateStr);
       if (dayStats.score === 100 && dayStats.scheduledCount > 0) {
         setIsPerfectDayModalOpen(true);
         playCelebrationSound();
@@ -303,21 +306,23 @@ export default function App() {
     }
   };
 
-  // Direct progress updates for count/duration/quantity habits
+  // Direct progress updates for count/duration/quantity habits (supports retroactive target date)
   const handleUpdateHabitProgress = (
     habitId: string,
     progressValue: number,
-    isCompleted: boolean
+    isCompleted: boolean,
+    targetDateStr?: string
   ) => {
-    const todayStr = getTodayStr();
+    const activeDateStr = targetDateStr || getTodayStr();
+    const isPastDate = activeDateStr !== getTodayStr();
     const existingComp = completions.find(
-      (c) => c.habitId === habitId && c.dateStr === todayStr
+      (c) => c.habitId === habitId && c.dateStr === activeDateStr
     );
 
     const updatedComp: HabitCompletion = {
       id: existingComp ? existingComp.id : generateId('comp'),
       habitId,
-      dateStr: todayStr,
+      dateStr: activeDateStr,
       isCompleted,
       progressValue,
       completedAt: isCompleted ? new Date().toISOString() : undefined,
@@ -348,7 +353,9 @@ export default function App() {
         const tx: XPTransaction = {
           id: generateId('tx'),
           amount: h.xpReward,
-          reason: `Target Reached: ${h.title}`,
+          reason: isPastDate
+            ? `Target Reached (${activeDateStr}): ${h.title}`
+            : `Target Reached: ${h.title}`,
           timestamp: new Date().toISOString(),
           habitId,
         };
@@ -663,6 +670,8 @@ export default function App() {
             habits={habits}
             completions={completions}
             reflections={reflections}
+            onToggleHabit={handleToggleHabit}
+            onUpdateHabitProgress={handleUpdateHabitProgress}
           />
         );
       case 'progress':
