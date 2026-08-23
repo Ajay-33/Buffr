@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Habit,
   HabitCompletion,
@@ -87,8 +87,32 @@ export default function App() {
   const [isLootDropModalOpen, setIsLootDropModalOpen] = useState(false);
   const [isRetroCartridgeOpen, setIsRetroCartridgeOpen] = useState(false);
 
-  // Sync with Android Home Screen Widget and Notification Service on app load & attach action listeners
+  // ---------------------------------------------------------------------------
+  // Widget <-> App Sync Engine
+  //
+  // CRITICAL: The listeners below are registered ONCE (empty deps), but React
+  // state changes every render. Calling a captured `handleToggleHabit` directly
+  // would operate on STALE habits/completions arrays — the root cause of widget
+  // taps silently doing nothing or flipping the wrong way after cloud sync /
+  // habit edits. We therefore route every external toggle through a ref that
+  // always points at the freshest handler.
+  // ---------------------------------------------------------------------------
+  const handleToggleRef = useRef<(habitId: string, targetDateStr?: string, forcedIsCompleted?: boolean) => void>(() => {});
+
   useEffect(() => {
+    handleToggleRef.current = handleToggleHabit;
+  }); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    // Applies widget/notification-driven completions using their ABSOLUTE desired
+    // state, then immediately pushes the reconciled payload back to the widget.
+    const consumeWidgetActions = () => {
+      BuffrWidgetBridge.consumePendingWidgetActions((habitId, isCompleted) => {
+        handleToggleRef.current(habitId, undefined, isCompleted);
+      });
+      BuffrWidgetBridge.sync();
+    };
+
     // 1. Initial Widget & Notification Sync
     BuffrWidgetBridge.sync();
     BuffrNotificationService.initChannels().then(() => {
@@ -97,31 +121,24 @@ export default function App() {
 
     // 2. Setup Interactive Notification Actions (Mark Done & Snooze)
     BuffrNotificationService.setupActionListeners((habitId) => {
-      handleToggleHabit(habitId);
+      handleToggleRef.current(habitId);
+      BuffrWidgetBridge.sync();
     });
 
     // 3. Consume any pending completions checked off from Home Screen Widgets
-    BuffrWidgetBridge.consumePendingWidgetActions((habitId) => {
-      handleToggleHabit(habitId);
-    });
+    consumeWidgetActions();
 
     // 4. Poll/Listen on App Resume / Visibility Change
     const handleAppResume = () => {
       if (document.visibilityState === 'visible') {
-        BuffrWidgetBridge.consumePendingWidgetActions((habitId) => {
-          handleToggleHabit(habitId);
-        });
+        consumeWidgetActions();
       }
     };
 
     document.addEventListener('visibilitychange', handleAppResume);
     window.addEventListener('focus', handleAppResume);
 
-    const interval = setInterval(() => {
-      BuffrWidgetBridge.consumePendingWidgetActions((habitId) => {
-        handleToggleHabit(habitId);
-      });
-    }, 1000); // Increased polling frequency from 2500ms to 1000ms
+    const interval = setInterval(consumeWidgetActions, 1000);
 
     return () => {
       document.removeEventListener('visibilitychange', handleAppResume);
@@ -275,7 +292,12 @@ export default function App() {
   };
 
   // Habit Toggle / Completion Progression Engine (Supports retroactive date logging for yesterday/past days)
-  const handleToggleHabit = (habitId: string, targetDateStr?: string) => {
+  //
+  // `forcedIsCompleted`: when the event originates from an EXTERNAL surface
+  // (home-screen widget / notification action), it carries an ABSOLUTE desired
+  // end-state instead of a relative toggle. Applying it idempotently prevents
+  // duplicate deliveries from double-counting XP or reverting progress.
+  const handleToggleHabit = (habitId: string, targetDateStr?: string, forcedIsCompleted?: boolean) => {
     const activeDateStr = targetDateStr || getTodayStr();
     const isPastDate = activeDateStr !== getTodayStr();
     const targetHabit = habits.find((h) => h.id === habitId);
@@ -285,7 +307,15 @@ export default function App() {
       (c) => c.habitId === habitId && c.dateStr === activeDateStr
     );
 
-    const willBeCompleted = existingComp ? !existingComp.isCompleted : true;
+    // Idempotency guard: if an external event demands a state we are ALREADY in,
+    // this is a duplicate/stale delivery -> no-op (no XP, no re-render churn).
+    if (forcedIsCompleted !== undefined && existingComp?.isCompleted === forcedIsCompleted) {
+      return;
+    }
+
+    const willBeCompleted = forcedIsCompleted !== undefined
+      ? forcedIsCompleted
+      : existingComp ? !existingComp.isCompleted : true;
     const progressVal = willBeCompleted ? targetHabit.targetValue : 0;
 
     const updatedComp: HabitCompletion = {

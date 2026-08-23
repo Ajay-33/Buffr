@@ -9,6 +9,10 @@ import android.content.SharedPreferences;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 public class BuffrWidgetData {
     private static final String PREFS_NAME = "buffr_widget_prefs";
     private static final String KEY_HERO_NAME = "hero_name";
@@ -49,12 +53,28 @@ public class BuffrWidgetData {
             if (obj.has("questPercent")) editor.putInt(KEY_QUEST_PERCENT, obj.getInt("questPercent"));
             if (obj.has("nextQuestTitle")) editor.putString(KEY_NEXT_QUEST_TITLE, obj.getString("nextQuestTitle"));
             
-            // Critical Interlock: Only update habits if the incoming data is newer than the last native click.
-            // This prevents the "revert" flicker when the app sends stale data while a native action is pending.
+            // Habit-list propagation rules:
+            //
+            // 1. STRUCTURAL changes (tasks added / removed / re-created by cloud
+            //    sync or onboarding) must ALWAYS propagate to the widget. Under the
+            //    old timestamp-only gate such changes could be rejected forever,
+            //    leaving the widget showing a permanently stale quest list.
+            //
+            // 2. VALUE-level flips (isCompleted toggles) are still gated by the
+            //    interlock so that stale web payloads don't visually revert a tap
+            //    the user just made on the widget itself.
             long incomingTs = obj.optLong("syncTimestamp", 0);
             long lastNativeInteraction = prefs.getLong(KEY_LAST_NATIVE_INTERACTION, 0);
             
-            if (incomingTs >= lastNativeInteraction) {
+            boolean structureChanged = false;
+            if (obj.has("habits")) {
+                JSONArray incomingHabits = obj.getJSONArray("habits");
+                JSONArray currentHabits = getHabitsArray(context);
+                structureChanged = !extractSortedIds(incomingHabits)
+                        .equals(extractSortedIds(currentHabits));
+            }
+            
+            if (structureChanged || incomingTs >= lastNativeInteraction) {
                 if (obj.has("habits")) editor.putString(KEY_HABITS_JSON, obj.getJSONArray("habits").toString());
                 if (obj.has("syncTimestamp")) editor.putLong(KEY_SYNC_TIMESTAMP, incomingTs);
             }
@@ -192,6 +212,25 @@ public class BuffrWidgetData {
         String pending = prefs.getString(KEY_PENDING_COMPLETIONS, "[]");
         prefs.edit().putString(KEY_PENDING_COMPLETIONS, "[]").apply();
         return pending;
+    }
+
+    /**
+     * Builds an order-independent identity fingerprint of a habit list so we can
+     * detect structural changes (added/removed/re-created tasks) regardless of
+     * ordering or completion-state differences.
+     */
+    private static String extractSortedIds(JSONArray arr) {
+        try {
+            List<String> ids = new ArrayList<>();
+            for (int i = 0; i < arr.length(); i++) {
+                JSONObject o = arr.optJSONObject(i);
+                if (o != null) ids.add(o.optString("id"));
+            }
+            Collections.sort(ids);
+            return ids.toString();
+        } catch (Exception e) {
+            return "";
+        }
     }
 
     public static PendingIntent getLaunchPendingIntent(Context context) {

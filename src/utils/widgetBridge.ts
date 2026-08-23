@@ -1,5 +1,6 @@
 import { BuffrStorage } from '../storage/db';
 import { calculateLevelFromTotalXp } from './gamification';
+import { getTodayStr } from './dateUtils';
 
 export interface WidgetHabitItem {
   id: string;
@@ -27,6 +28,11 @@ export interface WidgetPayload {
 }
 
 export class BuffrWidgetBridge {
+  // Dedupe ledger for externally-triggered completions. The native layer clears
+  // its queue on read, but overlapping pollers / page reloads can still observe
+  // the same event twice; each delivery is stamped with habitId + timestamp.
+  private static processedSignatures = new Set<string>();
+
   public static sync(): void {
     if (typeof window === 'undefined') return;
 
@@ -35,7 +41,11 @@ export class BuffrWidgetBridge {
       const habits = BuffrStorage.getHabits().filter((h) => !h.isArchived && !h.isPaused);
       const completions = BuffrStorage.getCompletions();
 
-      const todayStr = new Date().toISOString().split('T')[0];
+      // IMPORTANT: must use the LOCAL date (same as getTodayStr() used when
+      // logging completions), NOT the UTC ISO date — otherwise between midnight
+      // and timezone offset (e.g. 00:00–05:30 IST) the widget would filter out
+      // ALL of today's completions and render every quest as unchecked.
+      const todayStr = getTodayStr();
       const todayCompletions = completions.filter((c) => c.dateStr === todayStr && c.isCompleted);
       const completedHabitIds = new Set(todayCompletions.map((c) => c.habitId));
 
@@ -104,11 +114,22 @@ export class BuffrWidgetBridge {
       if (nativeWidget && typeof nativeWidget.getPendingCompletions === 'function') {
         const rawJson = nativeWidget.getPendingCompletions();
         if (rawJson && rawJson !== '[]') {
-          const pendingList: Array<{ habitId: string; isCompleted: boolean }> = JSON.parse(rawJson);
+          const pendingList: Array<{ habitId: string; isCompleted: boolean; timestamp?: number }> = JSON.parse(rawJson);
           for (const item of pendingList) {
-            if (item.habitId) {
-              onToggleAction(item.habitId, item.isCompleted);
+            if (!item.habitId) continue;
+
+            // Skip events we have already applied (double-delivery protection)
+            const signature = `${item.habitId}|${item.timestamp ?? ''}`;
+            if (BuffrWidgetBridge.processedSignatures.has(signature)) continue;
+            BuffrWidgetBridge.processedSignatures.add(signature);
+
+            // Keep the ledger bounded
+            if (BuffrWidgetBridge.processedSignatures.size > 500) {
+              const recent = [...BuffrWidgetBridge.processedSignatures].slice(-250);
+              BuffrWidgetBridge.processedSignatures = new Set(recent);
             }
+
+            onToggleAction(item.habitId, item.isCompleted);
           }
         }
       }
