@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "424855018399-ci_fixed_debug.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.buffr",
+            "certificate_hash": "ceb1d40eca521acb15af392ab50cd1f1aa33ca07"
+          }
+        },
+        {
           "client_id": "424855018399-gi05u4b1toh9ooanb6ujd2nea8jj9hci.apps.googleusercontent.com",
           "client_type": 3
         }
