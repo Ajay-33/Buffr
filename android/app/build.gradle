@@ -5,7 +5,22 @@ android {
     compileSdk = rootProject.ext.compileSdkVersion
     signingConfigs {
         debug {
-            storeFile file('debug.keystore')
+            // Pinned keystore strategy:
+            //  - CI (GitHub Actions): the workflow decodes ANDROID_KEYSTORE_BASE64
+            //    into app/debug.keystore -> exact same certificate every build.
+            //  - Local development: falls back to the standard user debug keystore
+            //    (%USERPROFILE%\.android\debug.keystore), which carries the same
+            //    SHA-1 registered in google-services.json, so Sign-In works over USB too.
+            def pinned = new File(projectDir, 'debug.keystore')
+            def userDefault = new File(System.getProperty('user.home'), '.android/debug.keystore')
+            if (pinned.exists()) {
+                storeFile pinned
+            } else {
+                if (!userDefault.exists()) {
+                    throw new FileNotFoundException("No signing keystore found. Expected either ${pinned} or ${userDefault}")
+                }
+                storeFile userDefault
+            }
             storePassword 'android'
             keyAlias 'androiddebugkey'
             keyPassword 'android'
