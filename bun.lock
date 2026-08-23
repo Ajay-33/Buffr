@@ -35,6 +35,11 @@
         "typescript": "~5.8.2",
         "vite": "^6.2.3",
       },
+      "optionalDependencies": {
+        "@rollup/rollup-linux-x64-gnu": "*",
+        "@tailwindcss/oxide-linux-x64-gnu": "*",
+        "lightningcss-linux-x64-gnu": "*",
+      },
     },
   },
   "packages": {

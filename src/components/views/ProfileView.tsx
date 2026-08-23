@@ -38,6 +38,9 @@ import {
   BellOff,
   Clock,
   Send,
+  Mail,
+  UserPlus,
+  LogIn,
 } from 'lucide-react';
 import { Habit, UserProfile, XPTransaction, LootItem, LootSlotType } from '../../types';
 import {
@@ -97,7 +100,28 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [nameInput, setNameInput] = useState(user.name);
   const [habitFilter, setHabitFilter] = useState<'all' | 'active' | 'paused' | 'archived'>('all');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { currentUser, syncStatus, signInWithGoogle, signOut, syncNow, loading } = useAuth();
+  const {
+    currentUser,
+    syncStatus,
+    signInWithGoogle,
+    signInWithEmail,
+    signUpWithEmail,
+    signInAsGuest,
+    signOut,
+    syncNow,
+    loading,
+    errorMessage,
+    clearAuthError,
+  } = useAuth();
+
+  // Multi-Method Cloud Auth Modal State
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'options' | 'email_login' | 'email_signup'>('options');
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authDisplayName, setAuthDisplayName] = useState('');
+  const [authSubmitting, setAuthSubmitting] = useState(false);
+  const [authLocalMsg, setAuthLocalMsg] = useState<string | null>(null);
 
   // In-App Retro Confirm Modal & Toast State (Bypasses browser window.confirm in iframe)
   const [confirmModal, setConfirmModal] = useState<{
@@ -883,7 +907,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           <div className="flex items-center space-x-2">
             <Cloud className="w-5 h-5 text-cyan-400" />
             <h2 className="text-xs sm:text-sm font-arcade text-cyan-300">
-              CLOUD SYNC & GOOGLE AUTH
+              CLOUD SYNC & BACKUP
             </h2>
           </div>
           {currentUser ? (
@@ -899,9 +923,20 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
         <p className="text-xs text-slate-300 font-retro">
           {currentUser
-            ? `Logged in as ${currentUser.displayName || currentUser.email || 'Player'}. Your habits, XP, streaks, and reflections sync to Firebase Firestore in real-time across all your phones and computers.`
-            : 'Sign in with Google to enable automatic cloud backup and real-time synchronization between your phone, laptop, and tablet.'}
+            ? `Logged in as ${currentUser.displayName || currentUser.email || (currentUser.isAnonymous ? 'Guest Hero' : 'Player')}. Your habits, XP, streaks, and reflections sync to Firebase Firestore in real-time across all your phones and computers.`
+            : 'Connect an account or enable 1-tap Guest Sync to back up your habits, XP, streaks, and reflections to the cloud.'}
         </p>
+
+        {errorMessage && (
+          <div className="p-2.5 bg-rose-950/70 border border-rose-500 text-rose-200 text-[10px] font-retro flex items-start space-x-2">
+            <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <span className="font-arcade text-[9px] text-rose-300 block mb-0.5">AUTH NOTICE</span>
+              <span>{errorMessage}</span>
+            </div>
+            <button onClick={clearAuthError} className="text-rose-400 hover:text-white text-xs">✕</button>
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-2 pt-1">
           {currentUser ? (
@@ -928,22 +963,40 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 className="py-2 px-3 bg-[#241124] hover:bg-[#3d1a3d] border-2 border-pink-500 text-pink-300 text-[9px] font-arcade flex items-center space-x-1.5 shadow-[2px_2px_0px_#000]"
               >
                 <LogOut className="w-3.5 h-3.5 text-pink-400" />
-                <span>SIGN OUT ({currentUser.email?.split('@')[0] || 'ACCOUNT'})</span>
+                <span>SIGN OUT ({currentUser.isAnonymous ? 'GUEST' : (currentUser.email?.split('@')[0] || 'ACCOUNT')})</span>
               </button>
             </>
           ) : (
-            <button
-              id="btn-google-signin"
-              onClick={() => {
-                playSound('powerup');
-                signInWithGoogle();
-              }}
-              disabled={loading}
-              className="w-full py-2.5 px-3 bg-gradient-to-r from-blue-900 to-indigo-900 hover:from-blue-800 hover:to-indigo-800 border-2 border-cyan-400 text-cyan-100 text-[10px] font-arcade flex items-center justify-center space-x-2 shadow-[3px_3px_0px_#000]"
-            >
-              <KeyRound className="w-4 h-4 text-cyan-300 animate-pulse" />
-              <span>CONNECT GOOGLE ACCOUNT & ENABLE CLOUD SYNC</span>
-            </button>
+            <div className="w-full flex flex-col sm:flex-row gap-2">
+              <button
+                id="btn-google-signin"
+                onClick={async () => {
+                  playSound('powerup');
+                  const res = await signInWithGoogle();
+                  if (!res.success) {
+                    setIsAuthModalOpen(true);
+                  }
+                }}
+                disabled={loading}
+                className="flex-1 py-2.5 px-3 bg-gradient-to-r from-blue-900 to-indigo-900 hover:from-blue-800 hover:to-indigo-800 border-2 border-cyan-400 text-cyan-100 text-[10px] font-arcade flex items-center justify-center space-x-2 shadow-[3px_3px_0px_#000]"
+              >
+                <KeyRound className="w-4 h-4 text-cyan-300 animate-pulse" />
+                <span>{loading ? 'CONNECTING...' : 'SIGN IN WITH GOOGLE'}</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  playSound('click');
+                  clearAuthError();
+                  setAuthLocalMsg(null);
+                  setIsAuthModalOpen(true);
+                }}
+                className="py-2.5 px-3 bg-[#180d38] hover:bg-[#28165e] border-2 border-purple-400 text-purple-200 text-[9px] font-arcade flex items-center justify-center space-x-1.5 shadow-[2px_2px_0px_#000]"
+              >
+                <Mail className="w-3.5 h-3.5 text-purple-300" />
+                <span>EMAIL / GUEST SYNC</span>
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -1099,6 +1152,214 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         }}
         onClose={() => setIsAvatarPickerOpen(false)}
       />
+
+      {/* Cloud Authentication & Sync Portal Modal */}
+      {isAuthModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-[#0f0826] border-2 border-cyan-400 p-5 max-w-sm w-full shadow-[6px_6px_0px_#000] relative space-y-4">
+            <div className="flex items-center justify-between border-b border-purple-800/80 pb-2.5">
+              <div className="flex items-center space-x-2">
+                <Cloud className="w-5 h-5 text-cyan-400" />
+                <h3 className="text-[11px] font-arcade text-cyan-300">
+                  {authMode === 'options'
+                    ? 'CLOUD SYNC & BACKUP ACCESS'
+                    : authMode === 'email_login'
+                    ? 'EMAIL LOGIN'
+                    : 'NEW HERO REGISTRATION'}
+                </h3>
+              </div>
+              <button
+                onClick={() => {
+                  playSound('click');
+                  setIsAuthModalOpen(false);
+                  setAuthMode('options');
+                  setAuthLocalMsg(null);
+                }}
+                className="text-slate-400 hover:text-white p-1 text-xs"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {authLocalMsg && (
+              <div className="p-2.5 bg-rose-950/80 border border-rose-500 text-rose-200 text-[10px] font-retro flex items-start space-x-2">
+                <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <span>{authLocalMsg}</span>
+                </div>
+              </div>
+            )}
+
+            {authMode === 'options' && (
+              <div className="space-y-2.5">
+                <p className="text-[10px] font-retro text-slate-300 leading-relaxed bg-[#170e36] p-2.5 border border-purple-900/60">
+                  Choose your cloud link method to preserve your level, streak shields, habits, and XP ledger securely in Firebase Firestore.
+                </p>
+
+                <button
+                  onClick={async () => {
+                    playSound('powerup');
+                    setAuthSubmitting(true);
+                    setAuthLocalMsg(null);
+                    const res = await signInWithGoogle();
+                    setAuthSubmitting(false);
+                    if (res.success) {
+                      setIsAuthModalOpen(false);
+                      showToast('⚡ GOOGLE CLOUD SYNC INITIALIZED!');
+                    } else if (res.error) {
+                      setAuthLocalMsg(res.error);
+                    }
+                  }}
+                  disabled={authSubmitting || loading}
+                  className="w-full py-2.5 px-3 bg-gradient-to-r from-blue-900 to-indigo-900 hover:from-blue-800 hover:to-indigo-800 border-2 border-cyan-400 text-cyan-100 text-[10px] font-arcade flex items-center justify-center space-x-2 shadow-[2px_2px_0px_#000] active:translate-y-0.5"
+                >
+                  <KeyRound className="w-4 h-4 text-cyan-300" />
+                  <span>{authSubmitting ? 'AUTHENTICATING...' : '1-CLICK GOOGLE SIGN-IN'}</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    playSound('click');
+                    setAuthMode('email_login');
+                    setAuthLocalMsg(null);
+                  }}
+                  className="w-full py-2 px-3 bg-[#1e1338] hover:bg-[#2b1b50] border-2 border-purple-400 text-purple-200 text-[9px] font-arcade flex items-center justify-center space-x-2 shadow-[2px_2px_0px_#000] active:translate-y-0.5"
+                >
+                  <LogIn className="w-3.5 h-3.5 text-purple-300" />
+                  <span>SIGN IN WITH EMAIL & PASSWORD</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    playSound('click');
+                    setAuthMode('email_signup');
+                    setAuthLocalMsg(null);
+                  }}
+                  className="w-full py-2 px-3 bg-[#140b29] hover:bg-[#201242] border-2 border-amber-400 text-amber-200 text-[9px] font-arcade flex items-center justify-center space-x-2 shadow-[2px_2px_0px_#000] active:translate-y-0.5"
+                >
+                  <UserPlus className="w-3.5 h-3.5 text-amber-300" />
+                  <span>CREATE NEW EMAIL ACCOUNT</span>
+                </button>
+
+                <div className="pt-1 border-t border-purple-950">
+                  <button
+                    onClick={async () => {
+                      playSound('powerup');
+                      setAuthSubmitting(true);
+                      setAuthLocalMsg(null);
+                      const res = await signInAsGuest();
+                      setAuthSubmitting(false);
+                      if (res.success) {
+                        setIsAuthModalOpen(false);
+                        showToast('🎮 1-TAP GUEST CLOUD SYNC ACTIVE!');
+                      } else if (res.error) {
+                        setAuthLocalMsg(res.error);
+                      }
+                    }}
+                    disabled={authSubmitting}
+                    className="w-full py-2 px-3 bg-[#0d211a] hover:bg-[#16362b] border border-emerald-500 text-emerald-300 text-[9px] font-arcade flex items-center justify-center space-x-1.5 active:translate-y-0.5"
+                  >
+                    <Sparkles className="w-3 h-3 text-emerald-400" />
+                    <span>INSTANT 1-TAP GUEST CLOUD SYNC</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {(authMode === 'email_login' || authMode === 'email_signup') && (
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!authEmail || !authPassword) {
+                    setAuthLocalMsg('Please fill in both email and password.');
+                    return;
+                  }
+                  playSound('powerup');
+                  setAuthSubmitting(true);
+                  setAuthLocalMsg(null);
+
+                  let res;
+                  if (authMode === 'email_login') {
+                    res = await signInWithEmail(authEmail, authPassword);
+                  } else {
+                    res = await signUpWithEmail(authEmail, authPassword, authDisplayName || user.name);
+                  }
+
+                  setAuthSubmitting(false);
+                  if (res.success) {
+                    setIsAuthModalOpen(false);
+                    setAuthMode('options');
+                    showToast(authMode === 'email_login' ? '🔑 LOGGED IN SUCCESSFULLY!' : '🛡️ HERO ACCOUNT CREATED & SYNCED!');
+                  } else if (res.error) {
+                    setAuthLocalMsg(res.error);
+                  }
+                }}
+                className="space-y-3"
+              >
+                {authMode === 'email_signup' && (
+                  <div>
+                    <label className="block text-[8px] font-arcade text-slate-300 mb-1">HERO CALLSIGN / NAME</label>
+                    <input
+                      type="text"
+                      value={authDisplayName}
+                      onChange={(e) => setAuthDisplayName(e.target.value)}
+                      placeholder={user.name || 'Hero Callsign'}
+                      className="w-full bg-[#170e36] border border-[#3b2d60] px-2.5 py-1.5 text-xs text-white font-retro focus:border-cyan-400 focus:outline-none"
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-[8px] font-arcade text-slate-300 mb-1">EMAIL ADDRESS</label>
+                  <input
+                    type="email"
+                    required
+                    value={authEmail}
+                    onChange={(e) => setAuthEmail(e.target.value)}
+                    placeholder="hero@example.com"
+                    className="w-full bg-[#170e36] border border-[#3b2d60] px-2.5 py-1.5 text-xs text-white font-retro focus:border-cyan-400 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[8px] font-arcade text-slate-300 mb-1">PASSWORD (MIN 6 CHARS)</label>
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    value={authPassword}
+                    onChange={(e) => setAuthPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full bg-[#170e36] border border-[#3b2d60] px-2.5 py-1.5 text-xs text-white font-retro focus:border-cyan-400 focus:outline-none"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playSound('click');
+                      setAuthMode('options');
+                      setAuthLocalMsg(null);
+                    }}
+                    className="py-2 px-3 bg-[#1e1338] hover:bg-[#2e1d54] border-2 border-slate-600 text-slate-300 text-[9px] font-arcade flex items-center justify-center space-x-1"
+                  >
+                    <span>BACK</span>
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={authSubmitting}
+                    className="py-2 px-3 bg-cyan-600 hover:bg-cyan-500 border-2 border-cyan-300 text-black font-bold text-[9px] font-arcade flex items-center justify-center space-x-1 shadow-[2px_2px_0px_#000]"
+                  >
+                    <span>{authSubmitting ? 'TRANSMITTING...' : (authMode === 'email_login' ? 'SIGN IN' : 'CREATE')}</span>
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

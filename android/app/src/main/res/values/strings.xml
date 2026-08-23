@@ -4,10 +4,9 @@
     <string name="title_activity_main">Buffr</string>
     <string name="package_name">com.example.buffr</string>
     <string name="custom_url_scheme">com.example.buffr</string>
+    <string name="default_web_client_id">424855018399-gi05u4b1toh9ooanb6ujd2nea8jj9hci.apps.googleusercontent.com</string>
     
     <!-- Widget Labels -->
     <string name="widget_daily_hud_name">Buffr Quest HUD</string>
     <string name="widget_daily_hud_desc">Glanceable daily quest progress, XP bar, streaks, and level status.</string>
-    <string name="widget_quick_stat_name">Buffr Hero Card</string>
-    <string name="widget_quick_stat_desc">View your Hero callsign, rank, level, and streak status.</string>
 </resources>

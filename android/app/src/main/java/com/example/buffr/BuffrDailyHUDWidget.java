@@ -45,22 +45,18 @@ public class BuffrDailyHUDWidget extends AppWidgetProvider {
         // Add a unique URI to prevent intent caching/merging issues
         intent.setData(Uri.parse(intent.toUri(Intent.URI_INTENT_SCHEME)));
         views.setRemoteAdapter(R.id.lv_quest_list, intent);
+        views.setEmptyView(R.id.lv_quest_list, R.id.tv_all_done_label);
 
-        // 3. Handle Empty State
+        // 3. Handle Empty State Text
         JSONArray habits = BuffrWidgetData.getHabitsArray(context);
         boolean allDone = (questsDone >= questsTotal && questsTotal > 0);
         
         if (habits.length() == 0) {
-            views.setViewVisibility(R.id.lv_quest_list, View.GONE);
-            views.setViewVisibility(R.id.tv_all_done_label, View.VISIBLE);
-            views.setTextViewText(R.id.tv_all_done_label, "Tap below to create your first quest!");
+            views.setTextViewText(R.id.tv_all_done_label, "✨ Tap OPEN to setup daily quests!");
         } else if (allDone) {
-            views.setViewVisibility(R.id.lv_quest_list, View.GONE);
-            views.setViewVisibility(R.id.tv_all_done_label, View.VISIBLE);
-            views.setTextViewText(R.id.tv_all_done_label, "🎉 All Daily Quests Conquered! Hero combo active.");
+            views.setTextViewText(R.id.tv_all_done_label, "🎉 All Daily Quests Conquered! Combo active.");
         } else {
-            views.setViewVisibility(R.id.lv_quest_list, View.VISIBLE);
-            views.setViewVisibility(R.id.tv_all_done_label, View.GONE);
+            views.setTextViewText(R.id.tv_all_done_label, "⚔️ Tap below to open Quest Log");
         }
 
         // 4. Setup Interactive Actions for List Items

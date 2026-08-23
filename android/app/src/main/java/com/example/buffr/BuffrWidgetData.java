@@ -80,15 +80,6 @@ public class BuffrWidgetData {
                 BuffrDailyHUDWidget.updateAppWidget(context, appWidgetManager, widgetId);
             }
         }
-
-        // Update Quick Stat Widgets
-        ComponentName quickComponentName = new ComponentName(context, BuffrQuickStatWidget.class);
-        int[] quickWidgetIds = appWidgetManager.getAppWidgetIds(quickComponentName);
-        if (quickWidgetIds != null && quickWidgetIds.length > 0) {
-            for (int widgetId : quickWidgetIds) {
-                BuffrQuickStatWidget.updateAppWidget(context, appWidgetManager, widgetId);
-            }
-        }
     }
 
     public static SharedPreferences getPrefs(Context context) {
@@ -124,15 +115,29 @@ public class BuffrWidgetData {
     }
 
     public static int getQuestsDone(Context context) {
-        return getPrefs(context).getInt(KEY_QUESTS_DONE, 0);
+        int done = getPrefs(context).getInt(KEY_QUESTS_DONE, -1);
+        if (done >= 0) return done;
+        // Calculate dynamically from habits
+        JSONArray habits = getHabitsArray(context);
+        int d = 0;
+        for (int i = 0; i < habits.length(); i++) {
+            if (habits.optJSONObject(i) != null && habits.optJSONObject(i).optBoolean("isCompleted", false)) {
+                d++;
+            }
+        }
+        return d;
     }
 
     public static int getQuestsTotal(Context context) {
-        return getPrefs(context).getInt(KEY_QUESTS_TOTAL, 0);
+        int total = getPrefs(context).getInt(KEY_QUESTS_TOTAL, 0);
+        if (total > 0) return total;
+        return getHabitsArray(context).length();
     }
 
     public static int getQuestPercent(Context context) {
-        return getPrefs(context).getInt(KEY_QUEST_PERCENT, 0);
+        int total = getQuestsTotal(context);
+        int done = getQuestsDone(context);
+        return total > 0 ? Math.round(((float) done / total) * 100) : 0;
     }
 
     public static String getNextQuestTitle(Context context) {
@@ -145,8 +150,38 @@ public class BuffrWidgetData {
 
     public static JSONArray getHabitsArray(Context context) {
         try {
-            String json = getPrefs(context).getString(KEY_HABITS_JSON, "[]");
-            return new JSONArray(json);
+            String json = getPrefs(context).getString(KEY_HABITS_JSON, null);
+            if (json != null && !json.trim().isEmpty() && !json.trim().equals("[]")) {
+                return new JSONArray(json);
+            }
+            
+            // Seed starter quests so widget is never blank on fresh install
+            JSONArray defaults = new JSONArray();
+            JSONObject h1 = new JSONObject();
+            h1.put("id", "starter_h1");
+            h1.put("title", "Drink 500ml Water");
+            h1.put("emoji", "💧");
+            h1.put("xp", 25);
+            h1.put("isCompleted", false);
+            defaults.put(h1);
+
+            JSONObject h2 = new JSONObject();
+            h2.put("id", "starter_h2");
+            h2.put("title", "Morning Workout / Walk");
+            h2.put("emoji", "⚔️");
+            h2.put("xp", 50);
+            h2.put("isCompleted", false);
+            defaults.put(h2);
+
+            JSONObject h3 = new JSONObject();
+            h3.put("id", "starter_h3");
+            h3.put("title", "Deep Work Focus Session");
+            h3.put("emoji", "📖");
+            h3.put("xp", 50);
+            h3.put("isCompleted", false);
+            defaults.put(h3);
+
+            return defaults;
         } catch (Exception e) {
             return new JSONArray();
         }

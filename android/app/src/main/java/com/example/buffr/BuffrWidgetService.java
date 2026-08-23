@@ -2,9 +2,9 @@ package com.example.buffr;
 
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Color;
 import android.widget.RemoteViews;
 import android.widget.RemoteViewsService;
+import androidx.core.content.ContextCompat;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -63,16 +63,21 @@ class BuffrRemoteViewsFactory implements RemoteViewsService.RemoteViewsFactory {
             views.setTextViewText(R.id.tv_quest_title, emoji + " " + title);
             views.setTextViewText(R.id.tv_quest_xp, "+" + xp + " XP");
 
+            int emeraldColor = ContextCompat.getColor(mContext, R.color.widget_emerald);
+            int cyanColor = ContextCompat.getColor(mContext, R.color.widget_cyan);
+            int mutedColor = ContextCompat.getColor(mContext, R.color.widget_text_muted);
+            int primaryColor = ContextCompat.getColor(mContext, R.color.widget_text_primary);
+
             if (isDone) {
                 views.setTextViewText(R.id.btn_check, "✔");
-                views.setTextColor(R.id.btn_check, mContext.getColor(R.color.widget_emerald));
+                views.setTextColor(R.id.btn_check, emeraldColor);
                 views.setInt(R.id.btn_check, "setBackgroundResource", R.drawable.widget_checkbox_checked_bg);
-                views.setTextColor(R.id.tv_quest_title, mContext.getColor(R.color.widget_text_muted));
+                views.setTextColor(R.id.tv_quest_title, mutedColor);
             } else {
                 views.setTextViewText(R.id.btn_check, "◻");
-                views.setTextColor(R.id.btn_check, mContext.getColor(R.color.widget_cyan));
+                views.setTextColor(R.id.btn_check, cyanColor);
                 views.setInt(R.id.btn_check, "setBackgroundResource", R.drawable.widget_checkbox_bg);
-                views.setTextColor(R.id.tv_quest_title, mContext.getColor(R.color.widget_text_primary));
+                views.setTextColor(R.id.tv_quest_title, primaryColor);
             }
 
             // Create a fill-in intent for the item click. 

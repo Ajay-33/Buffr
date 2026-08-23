@@ -106,7 +106,7 @@ export const WeeklyReviewModal: React.FC<WeeklyReviewModalProps> = ({
 
         {/* Content */}
         <div className="p-4 sm:p-6 space-y-4 overflow-y-auto max-h-[75vh]">
-          {/* Consistency Hero Card */}
+          {/* Consistency Rate Card */}
           <div className="p-3.5 bg-[#090416] border-2 border-green-400 shadow-[4px_4px_0px_#000] text-center">
             <span className="text-[9px] font-arcade text-green-400 block mb-1">
               OVERALL 7-DAY CLEAR RATE
