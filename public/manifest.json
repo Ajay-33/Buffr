@@ -61,19 +61,6 @@
           "type": "image/png"
         }
       ]
-    },
-    {
-      "name": "Arcade HUD Widgets",
-      "short_name": "Widgets",
-      "description": "Open live companion widgets",
-      "url": "/?modal=widgets",
-      "icons": [
-        {
-          "src": "/icon-192.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        }
-      ]
     }
   ],
   "start_url": "/",

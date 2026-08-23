@@ -6,7 +6,6 @@ import {
   Smartphone,
   Maximize2,
   Gamepad2,
-  LayoutGrid,
   Heart,
   Cloud,
   CheckCircle2,
@@ -23,7 +22,6 @@ interface BuffrHeaderProps {
   onTogglePhoneFrame?: () => void;
   onToggleDeviceFrame?: () => void;
   isDeviceFrameEnabled?: boolean;
-  onOpenWidgetSimulator?: () => void;
   onOpenCreateHabit?: () => void;
   onOpenLevelUpModal?: () => void;
 }
@@ -35,7 +33,6 @@ export const BuffrHeader: React.FC<BuffrHeaderProps> = ({
   onTogglePhoneFrame,
   onToggleDeviceFrame,
   isDeviceFrameEnabled,
-  onOpenWidgetSimulator,
 }) => {
   const isFramed = isDeviceFrameEnabled ?? user.isPhoneFrame ?? false;
   const handleToggleFrame = onToggleDeviceFrame || onTogglePhoneFrame;
@@ -133,18 +130,6 @@ export const BuffrHeader: React.FC<BuffrHeaderProps> = ({
             <Heart className="w-3 h-3 text-pink-400 fill-pink-400" />
             <span>{user.streakFreezesRemaining ?? user.streakFreezes ?? 0}</span>
           </div>
-
-          {/* Widgets & Android PWA launcher - Accessible on all viewports */}
-          {onOpenWidgetSimulator && (
-            <button
-              id="header-btn-widgets"
-              onClick={onOpenWidgetSimulator}
-              className="flex p-1.5 sm:p-2 bg-[#1e143f] hover:bg-[#2c1d5e] border-2 border-cyan-500 text-cyan-300 shadow-[2px_2px_0px_#000] active:translate-y-0.5 transition-all"
-              title="Android Home-Screen Widgets & PWA Launcher"
-            >
-              <LayoutGrid className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-400" />
-            </button>
-          )}
 
           {/* Sound Toggle */}
           {onToggleSound && (

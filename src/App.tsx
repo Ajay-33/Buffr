@@ -28,7 +28,6 @@ import { LevelUpModal } from './components/modals/LevelUpModal';
 import { PerfectDayModal } from './components/modals/PerfectDayModal';
 import { DailyReflectionModal } from './components/modals/DailyReflectionModal';
 import { WeeklyReviewModal } from './components/modals/WeeklyReviewModal';
-import { WidgetSimulatorModal } from './components/modals/WidgetSimulatorModal';
 import { OnboardingModal } from './components/modals/OnboardingModal';
 
 // Utils
@@ -115,7 +114,6 @@ export default function App() {
   const [isPerfectDayModalOpen, setIsPerfectDayModalOpen] = useState(false);
   const [isDailyReflectionOpen, setIsDailyReflectionOpen] = useState(false);
   const [isWeeklyReviewOpen, setIsWeeklyReviewOpen] = useState(false);
-  const [isWidgetSimulatorOpen, setIsWidgetSimulatorOpen] = useState(false);
 
   // Sync state helpers
   const refreshAllState = () => {
@@ -725,7 +723,6 @@ export default function App() {
             onTogglePauseHabit={handleTogglePauseHabit}
             onToggleArchiveHabit={handleToggleArchiveHabit}
             onDeleteHabit={handleDeleteHabit}
-            onOpenWidgetSimulator={() => setIsWidgetSimulatorOpen(true)}
             onResetDemoData={handleExploreDemo}
             onResetFreshData={handleResetFresh}
             onDataImportSuccess={refreshAllState}
@@ -752,7 +749,6 @@ export default function App() {
           setEditingHabit(null);
           setIsHabitFormOpen(true);
         }}
-        onOpenWidgetSimulator={() => setIsWidgetSimulatorOpen(true)}
         isDeviceFrameEnabled={isDeviceFrameEnabled}
         onToggleDeviceFrame={() => setIsDeviceFrameEnabled(!isDeviceFrameEnabled)}
       />
@@ -828,15 +824,6 @@ export default function App() {
         habits={habits}
         completions={completions}
         onClose={() => setIsWeeklyReviewOpen(false)}
-      />
-
-      <WidgetSimulatorModal
-        isOpen={isWidgetSimulatorOpen}
-        user={user}
-        habits={habits}
-        completions={completions}
-        onToggleHabit={handleToggleHabit}
-        onClose={() => setIsWidgetSimulatorOpen(false)}
       />
 
       <OnboardingModal

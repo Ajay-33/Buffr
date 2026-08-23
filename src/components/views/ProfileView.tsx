@@ -57,7 +57,6 @@ interface ProfileViewProps {
   onTogglePauseHabit: (habitId: string, pauseReason?: string) => void;
   onToggleArchiveHabit: (habitId: string) => void;
   onDeleteHabit: (habitId: string) => void;
-  onOpenWidgetSimulator: () => void;
   onResetDemoData: () => void;
   onResetFreshData?: () => void;
   onDataImportSuccess: () => void;
@@ -72,7 +71,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onTogglePauseHabit,
   onToggleArchiveHabit,
   onDeleteHabit,
-  onOpenWidgetSimulator,
   onResetDemoData,
   onResetFreshData,
   onDataImportSuccess,
@@ -527,38 +525,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </div>
       </div>
 
-      {/* Android Widgets & Homescreen Quick Launch Section */}
-      <div className="p-3.5 sm:p-5 bg-[#11092a] border-2 border-cyan-500 shadow-[3px_3px_0px_#05020a] space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <LayoutGrid className="w-4 h-4 text-cyan-400" />
-            <h2 className="text-xs sm:text-sm font-arcade text-cyan-300">
-              ANDROID HOMESCREEN & ARCADE HUD WIDGETS
-            </h2>
-          </div>
-          <span className="text-[8px] font-arcade bg-cyan-950 text-cyan-300 border border-cyan-500 px-1.5 py-0.5">
-            PWA SHORTCUTS
-          </span>
-        </div>
-
-        <p className="text-[10px] font-retro text-slate-300 leading-relaxed">
-          Launch live 2x2 circular progress cards, 4x2 quick-dispatch quest checklists, or install Buffr as a standalone full-screen WebAPK with 1-tap long-press home screen shortcuts on Android.
-        </p>
-
-        <button
-          type="button"
-          id="btn-open-widgets-from-profile"
-          onClick={() => {
-            playSound('powerup');
-            onOpenWidgetSimulator();
-          }}
-          className="w-full py-2.5 bg-gradient-to-r from-cyan-900 to-blue-900 hover:from-cyan-800 hover:to-blue-800 border-2 border-cyan-400 text-cyan-200 text-[10px] font-arcade shadow-[3px_3px_0px_#000] active:translate-y-0.5 flex items-center justify-center space-x-2"
-        >
-          <Sparkles className="w-3.5 h-3.5 text-yellow-400 animate-pulse" />
-          <span>OPEN ANDROID HUD WIDGETS & SETUP GUIDE</span>
-        </button>
-      </div>
-
       {/* App Preferences & Settings */}
       <div className="p-3.5 sm:p-5 bg-[#11092a] border-2 border-[#3b2d60] shadow-[3px_3px_0px_#05020a] space-y-3">
         <h2 className="text-xs sm:text-sm font-arcade text-yellow-400">CHIPTUNE AUDIO & HARDWARE SETTINGS</h2>
@@ -623,21 +589,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               />
             </div>
           </div>
-        </div>
-
-        {/* Android Widget Simulator Trigger */}
-        <div className="pt-1">
-          <button
-            id="btn-open-widget-sim"
-            onClick={() => {
-              playSound('click');
-              onOpenWidgetSimulator();
-            }}
-            className="w-full py-2.5 bg-[#170e36] hover:bg-[#251657] border-2 border-cyan-400 text-[10px] font-arcade text-cyan-300 flex items-center justify-center space-x-2 shadow-[2px_2px_0px_#000]"
-          >
-            <Smartphone className="w-4 h-4 text-cyan-400" />
-            <span>LAUNCH ANDROID DESKTOP WIDGET PREVIEW</span>
-          </button>
         </div>
       </div>
 
