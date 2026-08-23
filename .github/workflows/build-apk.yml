@@ -3,7 +3,7 @@ name: Build Buffr APK
 on:
   push:
     branches: [ main ]
-  workflow_dispatch: 
+  workflow_dispatch:
 
 jobs:
   build:
@@ -16,7 +16,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 24 # Upgraded to 24 to match GitHub Actions runner defaults and avoid deprecation noise
+          node-version: 24
           cache: 'npm'
 
       - name: Setup Java JDK
@@ -24,11 +24,32 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '21'
-          cache: 'gradle' # This will cache Gradle dependencies and speed up your builds!
+          cache: 'gradle'
+
+      - name: Ensure Fixed Debug Keystore Exists
+        run: |
+          if [ ! -f android/app/debug.keystore ]; then
+            echo "Generating consistent debug keystore in android/app/debug.keystore..."
+            keytool -genkey -v \
+              -keystore android/app/debug.keystore \
+              -alias androiddebugkey \
+              -storepass android \
+              -keypass android \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
+
+      - name: Print Exact SHA-1 & SHA-256 Fingerprints
+        run: |
+          echo "=========================================================="
+          echo "🚀 BUFFR FIXED DEBUG SIGNING FINGERPRINTS:"
+          keytool -list -v -keystore android/app/debug.keystore -alias androiddebugkey -storepass android | grep -E "SHA1|SHA256|MD5"
+          echo "=========================================================="
 
       - name: Install Node Dependencies
         run: |
-          # We use --legacy-peer-deps to avoid any conflict during cross-platform resolution
           npm install --include=optional
 
       - name: Build Web App
@@ -41,6 +62,7 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
+          ./gradlew signingReport
           ./gradlew assembleDebug
 
       - name: Rename and Prepare APK
