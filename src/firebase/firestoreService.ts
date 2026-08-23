@@ -69,6 +69,12 @@ export class FirestoreSyncService {
         await setDoc(refDoc, ref, { merge: true });
       }
 
+      // Save the XP transaction ledger so history survives device migration
+      for (const tx of xpTransactions) {
+        const txRef = doc(db, 'users', userId, 'xp_transactions', tx.id);
+        await setDoc(txRef, tx, { merge: true });
+      }
+
       return true;
     } catch (error) {
       console.error('Failed to push to Cloud Firestore:', error);
@@ -165,6 +171,7 @@ export class FirestoreSyncService {
       completions?: HabitCompletion[];
       reflections?: DailyReflection[];
       routineChains?: any[];
+      xpTransactions?: XPTransaction[];
     }) => void
   ): () => void {
     const unsubscribes: (() => void)[] = [];
@@ -253,6 +260,23 @@ export class FirestoreSyncService {
         }
       );
       unsubscribes.push(unsubChains);
+
+      // 6. XP Transactions collection (ledger streaming for multi-device sync)
+      const txsCol = collection(db, 'users', userId, 'xp_transactions');
+      const unsubsTxs = onSnapshot(
+        txsCol,
+        (snap) => {
+          const txsList: XPTransaction[] = [];
+          snap.forEach((d) => txsList.push(d.data() as XPTransaction));
+          if (txsList.length > 0) {
+            onDataUpdated({ xpTransactions: txsList });
+          }
+        },
+        (err) => {
+          console.warn('XP transactions snapshot subscription note:', err?.message || err);
+        }
+      );
+      unsubscribes.push(unsubsTxs);
     } catch (err) {
       console.warn('Subscription setup error:', err);
     }

@@ -180,6 +180,18 @@ export default function App() {
         setRoutineChains(cloudData.routineChains);
         BuffrStorage.saveRoutineChains(cloudData.routineChains);
       }
+      // Merge the cloud XP ledger into local state (dedupe by id, newest first)
+      if (cloudData.xpTransactions && cloudData.xpTransactions.length > 0) {
+        setXpTransactions((prev) => {
+          const merged = new Map(prev.map((t) => [t.id, t]));
+          cloudData.xpTransactions!.forEach((t) => merged.set(t.id, t));
+          const list = [...merged.values()].sort((a, b) =>
+            (b.timestamp || '').localeCompare(a.timestamp || '')
+          );
+          BuffrStorage.saveXPTransactions(list);
+          return list;
+        });
+      }
     });
 
     return () => unsubscribe();
@@ -316,23 +328,32 @@ export default function App() {
     const willBeCompleted = forcedIsCompleted !== undefined
       ? forcedIsCompleted
       : existingComp ? !existingComp.isCompleted : true;
-    const progressVal = willBeCompleted ? targetHabit.targetValue : 0;
+    // ---- ANTI-FARM BOOKKEEPING -------------------------------------------------
+    // Snapshot the PRE-toggle state so every bonus can be revoked symmetrically.
+    const wasChainFullyComplete = (chain: RoutineChain) =>
+      chain.habitIds.every(
+        (id) =>
+          id === habitId
+            ? (existingComp?.isCompleted ?? false)
+            : completions.some(
+                (c) => c.habitId === id && c.dateStr === activeDateStr && c.isCompleted
+              )
+      );
+    const affectedChains = routineChains.filter(
+      (rc) => !rc.isArchived && rc.habitIds.includes(habitId)
+    );
+    // Loot rolls & perfect-day celebrations fire ONLY on the first completion of
+    // this record — complete/uncomplete cycling can no longer spam them.
+    const isFirstCompletionToday = !existingComp?.completedAt;
 
-    const updatedComp: HabitCompletion = {
-      id: existingComp ? existingComp.id : generateId('comp'),
-      habitId,
-      dateStr: activeDateStr,
-      isCompleted: willBeCompleted,
-      progressValue: progressVal,
-      completedAt: willBeCompleted ? new Date().toISOString() : undefined,
-    };
-
-    BuffrStorage.saveCompletion(updatedComp);
-
-    // Calculate XP delta & RPG Bonuses
+    // Calculate XP delta & RPG Bonuses BEFORE persisting so the exact granted
+    // amount can be stamped onto the completion record (xpAwarded) and reversed
+    // 1:1 on undo — no more "award big, refund small" toggle farming.
     let nextTotalXp = user.totalXp;
     let droppedLoot: LootItem | null = null;
     let isCrit = false;
+    let earnedXp = 0;
+    let updatedComp: HabitCompletion;
 
     if (willBeCompleted) {
       // Habit streak bonus
@@ -343,7 +364,7 @@ export default function App() {
       const gearBuffs = calculateEquippedBuffs(user.equippedGear);
       const skillBonuses = calculateSkillTreeBonuses(user.skillTree);
 
-      let earnedXp = targetHabit.xpReward + streakBonus;
+      earnedXp = targetHabit.xpReward + streakBonus;
 
       // Gear bonus %
       if (gearBuffs.xpBonusPercent > 0) {
@@ -369,6 +390,18 @@ export default function App() {
 
       nextTotalXp += earnedXp;
 
+      // Persist the completion STAMPED with the exact amount granted
+      updatedComp = {
+        id: existingComp ? existingComp.id : generateId('comp'),
+        habitId,
+        dateStr: activeDateStr,
+        isCompleted: true,
+        progressValue: targetHabit.targetValue,
+        completedAt: new Date().toISOString(),
+        xpAwarded: earnedXp,
+      };
+      BuffrStorage.saveCompletion(updatedComp);
+
       const tx: XPTransaction = {
         id: generateId('tx'),
         amount: earnedXp,
@@ -390,7 +423,47 @@ export default function App() {
       }
       triggerHapticPulse('medium');
     } else {
-      nextTotalXp = Math.max(0, nextTotalXp - targetHabit.xpReward);
+      // SYMMETRIC REVERSAL: refund EXACTLY what was granted when this completion
+      // was made (base + streak + gear + crit included), not just the base reward.
+      const prevAward = existingComp?.xpAwarded ?? targetHabit.xpReward;
+      nextTotalXp = Math.max(0, nextTotalXp - prevAward);
+
+      if (prevAward !== 0) {
+        BuffrStorage.saveXPTransaction({
+          id: generateId('tx'),
+          amount: -prevAward,
+          reason: `↩️ Reverted: ${targetHabit.title} (-${prevAward} XP)`,
+          timestamp: new Date().toISOString(),
+          habitId,
+        });
+        setXpTransactions(BuffrStorage.getXpTransactions());
+      }
+
+      // Take back the combo bonus if this undo breaks a fully-complete chain
+      for (const chain of affectedChains) {
+        if (wasChainFullyComplete(chain)) {
+          nextTotalXp = Math.max(0, nextTotalXp - chain.comboBonusXp);
+          BuffrStorage.saveXPTransaction({
+            id: generateId('tx'),
+            amount: -chain.comboBonusXp,
+            reason: `↩️ Combo Broken: ${chain.title} (-${chain.comboBonusXp} XP)`,
+            timestamp: new Date().toISOString(),
+          });
+          setXpTransactions(BuffrStorage.getXpTransactions());
+        }
+      }
+
+      updatedComp = {
+        id: existingComp ? existingComp.id : generateId('comp'),
+        habitId,
+        dateStr: activeDateStr,
+        isCompleted: false,
+        progressValue: 0,
+        completedAt: undefined,
+        xpAwarded: undefined,
+      };
+      BuffrStorage.saveCompletion(updatedComp);
+
       triggerHapticPulse('light');
     }
 
@@ -434,20 +507,23 @@ export default function App() {
     // Calculate comprehensive streak & perfect days metrics
     const streakStats = calculateOverallStreak(habits, nextCompletions);
 
-    // Check Perfect Day 100% Score
+    // Check Perfect Day 100% Score (celebrate once per record — no spam on re-toggles)
     let isPerfectDayNow = false;
     if (willBeCompleted) {
       const dayStats = calculateDailyScore(habits, nextCompletions, activeDateStr);
       if (dayStats.score === 100 && dayStats.scheduledCount > 0) {
         isPerfectDayNow = true;
-        setIsPerfectDayModalOpen(true);
-        playCelebrationSound();
+        if (isFirstCompletionToday) {
+          setIsPerfectDayModalOpen(true);
+          playCelebrationSound();
+        }
       }
     }
 
-    // Roll for Loot Drop if completing mission
+    // Roll for Loot Drop — gated to the first completion of this record so
+    // toggle-spamming can't reroll gear drops (gear buffs feed back into XP%).
     let updatedInventory = user.inventory || [];
-    if (willBeCompleted) {
+    if (willBeCompleted && isFirstCompletionToday) {
       droppedLoot = rollForLootDrop(targetHabit, user, isPerfectDayNow);
       if (droppedLoot) {
         updatedInventory = [droppedLoot, ...updatedInventory];
@@ -507,6 +583,7 @@ export default function App() {
     const existingComp = completions.find(
       (c) => c.habitId === habitId && c.dateStr === activeDateStr
     );
+    const h = habits.find((hb) => hb.id === habitId);
 
     const updatedComp: HabitCompletion = {
       id: existingComp ? existingComp.id : generateId('comp'),
@@ -515,6 +592,9 @@ export default function App() {
       isCompleted,
       progressValue,
       completedAt: isCompleted ? new Date().toISOString() : undefined,
+      // Preserve the original grant on redundant saves; stamp on first completion.
+      // This lets an undo revoke EXACTLY what was awarded (anti farm).
+      xpAwarded: isCompleted ? (existingComp?.xpAwarded ?? h?.xpReward ?? 0) : undefined,
     };
 
     BuffrStorage.saveCompletion(updatedComp);
@@ -599,6 +679,59 @@ export default function App() {
           FirestoreSyncService.saveUser(currentUser.uid, nextUser);
           FirestoreSyncService.saveXPTransaction(currentUser.uid, tx);
         }
+      }
+    } else if (!isCompleted && existingComp?.isCompleted && h) {
+      // ── ANTI-FARM: symmetric revoke when a reached-target is undone ──
+      // Previously, un-completing a progress habit kept the XP AND re-completing
+      // granted it again — an infinite farm. Now the grant is reversed 1:1.
+      const prevAward = existingComp.xpAwarded ?? h.xpReward;
+      let revokedXp = Math.max(0, user.totalXp - prevAward);
+
+      BuffrStorage.saveXPTransaction({
+        id: generateId('tx'),
+        amount: -prevAward,
+        reason: `↩️ Target Undone (${activeDateStr}): ${h.title} (-${prevAward} XP)`,
+        timestamp: new Date().toISOString(),
+        habitId,
+      });
+
+      // Revoke combo bonus if this undo breaks a previously fully-complete chain
+      const affectedChainsRev = routineChains.filter(
+        (rc) => !rc.isArchived && rc.habitIds.includes(habitId)
+      );
+      for (const chain of affectedChainsRev) {
+        const wasFullyDone = chain.habitIds.every((id) =>
+          completions.some(
+            (c) => c.habitId === id && c.dateStr === activeDateStr && c.isCompleted
+          )
+        );
+        if (wasFullyDone) {
+          revokedXp = Math.max(0, revokedXp - chain.comboBonusXp);
+          BuffrStorage.saveXPTransaction({
+            id: generateId('tx'),
+            amount: -chain.comboBonusXp,
+            reason: `↩️ Combo Broken: ${chain.title} (-${chain.comboBonusXp} XP)`,
+            timestamp: new Date().toISOString(),
+          });
+        }
+      }
+
+      const revLevelInfo = calculateLevelFromTotalXp(revokedXp);
+      const nextUser: UserProfile = {
+        ...user,
+        totalXp: revokedXp,
+        level: revLevelInfo.level,
+        currentTitle:
+          revLevelInfo.level < user.level
+            ? revLevelInfo.titleUnlocked || 'Starter'
+            : user.currentTitle,
+      };
+      BuffrStorage.saveUser(nextUser);
+      setUser(nextUser);
+      setXpTransactions(BuffrStorage.getXpTransactions());
+
+      if (currentUser) {
+        FirestoreSyncService.saveUser(currentUser.uid, nextUser);
       }
     }
 
@@ -933,27 +1066,36 @@ export default function App() {
     BuffrStorage.saveDailyReflection(reflection);
     setReflections(BuffrStorage.getReflections());
 
-    // Award +25 XP
-    const nextTotalXp = user.totalXp + 25;
-    const levelInfo = calculateLevelFromTotalXp(nextTotalXp);
-    const nextUser = { ...user, totalXp: nextTotalXp, level: levelInfo.level };
-    BuffrStorage.saveUser(nextUser);
-    setUser(nextUser);
+    // ── ANTI-FARM: the +25 journal bonus is granted ONCE per calendar day ──
+    // Editing/updating today's entry never re-awards it.
+    const isNewReflection = !reflections.some((r) => r.dateStr === reflection.dateStr);
 
-    const tx: XPTransaction = {
-      id: generateId('tx'),
-      amount: 25,
-      reason: 'Completed Daily Reflection Journal',
-      timestamp: new Date().toISOString(),
-    };
-    BuffrStorage.saveXPTransaction(tx);
-    setXpTransactions(BuffrStorage.getXpTransactions());
-    playCelebrationSound();
+    if (isNewReflection) {
+      // Award +25 XP
+      const nextTotalXp = user.totalXp + 25;
+      const levelInfo = calculateLevelFromTotalXp(nextTotalXp);
+      const nextUser = { ...user, totalXp: nextTotalXp, level: levelInfo.level };
+      BuffrStorage.saveUser(nextUser);
+      setUser(nextUser);
+
+      const tx: XPTransaction = {
+        id: generateId('tx'),
+        amount: 25,
+        reason: 'Completed Daily Reflection Journal',
+        timestamp: new Date().toISOString(),
+      };
+      BuffrStorage.saveXPTransaction(tx);
+      setXpTransactions(BuffrStorage.getXpTransactions());
+      playCelebrationSound();
+
+      if (currentUser) {
+        FirestoreSyncService.saveUser(currentUser.uid, nextUser);
+        FirestoreSyncService.saveXPTransaction(currentUser.uid, tx);
+      }
+    }
 
     if (currentUser) {
       FirestoreSyncService.saveReflection(currentUser.uid, reflection);
-      FirestoreSyncService.saveUser(currentUser.uid, nextUser);
-      FirestoreSyncService.saveXPTransaction(currentUser.uid, tx);
     }
   };
 

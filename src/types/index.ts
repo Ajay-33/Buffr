@@ -83,6 +83,9 @@ export interface HabitCompletion {
   completedAt?: string;
   isCompleted: boolean;
   progressValue: number;
+  /** Exact XP granted when this completion was made — reversed 1:1 on undo,
+   *  preventing toggle-spam XP farming (streak/gear/crit bonuses included). */
+  xpAwarded?: number;
   reasonMissed?: string;
   notes?: string;
 }

@@ -35,6 +35,7 @@
 
 ### 🔥 Cloud Sync & Google Authentication
 - **Firebase Firestore Integration**: Real-time cloud database syncing habits, completions, XP transactions, reflections, and player level progression.
+- **Full XP Ledger Streaming**: `xp_transactions` are bulk-pushed on sign-in and streamed live across devices via snapshot subscriptions, deduped by transaction id — your ⚡ point history now survives reinstalls and follows you to any device.
 - **Google Sign-In**: One-click Google Authentication with user-isolated subcollections (`/users/{userId}/*`).
 - **Offline-First Zero-Latency Engine**: Instant UI response via local storage with automatic background synchronization when online.
 - **Dedicated Distinct HUD Controls**: High-clarity arcade indicators for Cloud Sync (`G-SYNC`), active combo counters, and lives remaining.
@@ -51,6 +52,14 @@
 - **Real-Time Dynamic Sync Bridge**: Automatically broadcasts habit completions, XP level-ups, and profile changes to the native Android widget manager via zero-lag local bridge.
 - **Optimized Performance**: Production-ready Proguard configurations and modernized Gradle build scripts.
 - **Android Long-Press Quick Launchers**: 1-tap launcher shortcuts on supported home screens to jump straight into **Today's Quests** or **Daily Debrief**.
+
+### 🛡️ XP Economy Integrity (Anti-Farm)
+- **Once-Per-Day Journal Bonus**: The Daily Log grants its `+25 XP` only on the first save per calendar day — editing/updating an entry never re-awards it.
+- **Exact-Grant Reversal**: Every completion stamps the precise XP awarded (base + streak + gear + crit multipliers) onto its record as `xpAwarded`; un-completing refunds *exactly* that amount, making toggle-spam cycles provably net zero.
+- **Symmetric Progress Habits**: Undoing a reached quantity/duration target revokes its grant 1:1 (previously the XP was kept *and* re-earnable — infinite farm).
+- **Combo-Bonus Revocation**: Breaking a fully-complete Mini Combo chain automatically takes back its bonus XP.
+- **No Loot Rerolls**: Loot drops and Perfect Day celebrations fire only on the first completion of a quest each day — no gear-farming via rapid toggling.
+- **Reconciled Ledger**: Every grant and revoke emits mirrored `XPTransaction` entries, so the ⚡ history always sums back to `totalXp`.
 
 ### 🎁 Dynamic Loot Drops & Rarities
 - **Procedural Loot Engine**: Completing habits dynamically rolls for rare gear drops based on difficulty, streaks, and perfect days (high-variance, unpredictable loot pool).
@@ -110,6 +119,17 @@ If you make changes to the UI or add AI features in an external editor:
 ### Finding the Output APK
 After a successful build, your installable file is located at:
 `android/app/build/outputs/apk/debug/app-debug.apk`
+
+### 🔐 Signing & Pinned CI Certificates
+Google Sign-In requires the APK's SHA-1 certificate to be registered in Firebase, so Buffr pins **one keystore everywhere**:
+
+- **Local builds**: Gradle falls back to your standard user debug keystore (`%USERPROFILE%\.android\debug.keystore`) automatically when no project-local `android/app/debug.keystore` exists — same certificate, zero setup.
+- **GitHub Actions builds**: The workflow decodes the `ANDROID_KEYSTORE_BASE64` repository secret into `android/app/debug.keystore`, then **hard-fails the build** unless its SHA-1 matches the Firebase-registered fingerprint — a wrong-keyed APK can never ship silently.
+- **Key rotation**: Never commit `.keystore` files. Regenerate the base64 secret from the new keystore and update the app's certificate hash in the Firebase Console.
+
+> [!TIP]
+> If `npx cap sync android` complains about the Node version locally despite having Node ≥22 installed, invoke the CLI directly:
+> `node node_modules/@capacitor/cli/bin/capacitor sync android`
 
 ---
 
