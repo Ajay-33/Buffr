@@ -121,11 +121,12 @@ After a successful build, your installable file is located at:
 `android/app/build/outputs/apk/debug/app-debug.apk`
 
 ### 🔐 Signing & Pinned CI Certificates
-Google Sign-In requires the APK's SHA-1 certificate to be registered in Firebase, so Buffr pins **one keystore everywhere**:
+Google Sign-In requires the APK's SHA-1 certificate to be registered in Firebase, so Buffr pins **one committed keystore everywhere** (React-Native-template convention):
 
-- **Local builds**: Gradle falls back to your standard user debug keystore (`%USERPROFILE%\.android\debug.keystore`) automatically when no project-local `android/app/debug.keystore` exists — same certificate, zero setup.
-- **GitHub Actions builds**: The workflow decodes the `ANDROID_KEYSTORE_BASE64` repository secret into `android/app/debug.keystore`, then **hard-fails the build** unless its SHA-1 matches the Firebase-registered fingerprint — a wrong-keyed APK can never ship silently.
-- **Key rotation**: Never commit `.keystore` files. Regenerate the base64 secret from the new keystore and update the app's certificate hash in the Firebase Console.
+- **`android/app/debug.keystore` is intentionally checked in** — alias `androiddebugkey`, password `android`. Local builds and GitHub Actions builds sign identically with zero setup and zero secrets.
+- **Registered SHA-1**: `4C:D9:7F:E3:B2:F7:89:2D:47:56:9A:42:FF:76:68:D6:E6:0B:84:B5` must remain registered under the Android app in the Firebase Console.
+- **CI guardrail**: The workflow hard-fails if the built keystore's SHA-1 ever drifts from that value — a wrong-keyed APK can never ship silently.
+- **Key rotation**: Generate a replacement at the same path, register its new SHA-1 in Firebase Console, and bump `EXPECTED_SHA1` in `.github/workflows/build-apk.yml`.
 
 > [!TIP]
 > If `npx cap sync android` complains about the Node version locally despite having Node ≥22 installed, invoke the CLI directly:

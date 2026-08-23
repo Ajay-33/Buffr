@@ -26,22 +26,7 @@ jobs:
           java-version: '21'
           cache: 'gradle'
 
-      - name: Restore Pinned Signing Keystore
-        env:
-          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-        run: |
-          if [ -z "$KEYSTORE_BASE64" ]; then
-            echo "::error title=Missing Secret::ANDROID_KEYSTORE_BASE64 is not set on this repository."
-            echo "::error::Create it from your LOCAL debug keystore in PowerShell:"
-            echo "::error::[Convert]::ToBase64String([IO.File]::ReadAllBytes(\"$env:USERPROFILE\\.android\\debug.keystore\"))"
-            echo "::error::Then add it under Settings > Secrets and variables > Actions."
-            exit 1
-          fi
-          # Decode the EXACT keystore bytes used locally -> same SHA-1 on every build
-          mkdir -p android/app
-          echo "$KEYSTORE_BASE64" | base64 --decode > android/app/debug.keystore
-
-      - name: Verify Pinned Certificate Fingerprints
+      - name: Verify Committed Signing Keystore
         run: |
           KS=android/app/debug.keystore
           ALIAS=androiddebugkey
@@ -51,13 +36,13 @@ jobs:
           echo "=========================================================="
 
           # Hard-fail the build if the certificate is NOT the one registered in Firebase
-          EXPECTED_SHA1="a1c32dad91274fc3649b4af205a3acec6f4d1cfd"
+          EXPECTED_SHA1="4cd97fe3b2f7892d47569a42ff7668d6e60b84b5"
           ACTUAL_SHA1=$(keytool -list -v -keystore $KS -alias $ALIAS -storepass android \
             | grep "SHA1:" | head -n1 | awk '{print $2}' | tr -d ':' | tr '[:upper:]' '[:lower:]')
 
           if [ "$ACTUAL_SHA1" != "$EXPECTED_SHA1" ]; then
             echo "::error title=Certificate Mismatch::Keystore SHA-1 ($ACTUAL_SHA1) does NOT match the Firebase-registered SHA-1 ($EXPECTED_SHA1)."
-            echo "::error::Google Sign-In will fail with 'No credentials available'. Check the ANDROID_KEYSTORE_BASE64 secret."
+            echo "::error::Google Sign-In will fail with 'No credentials available'. The committed android/app/debug.keystore was modified or replaced." 
             exit 1
           fi
           echo "✅ Keystore matches the SHA-1 registered in Firebase. Sign-In will work."
