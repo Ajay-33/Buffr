@@ -47,6 +47,7 @@ import {
   DIFFICULTY_BASE_XP,
 } from './utils/gamification';
 import { getTodayStr } from './utils/dateUtils';
+import { BuffrWidgetBridge } from './utils/widgetBridge';
 import {
   playCompletionSound,
   playStreakSound,
@@ -83,6 +84,11 @@ export default function App() {
   const [pendingLootItem, setPendingLootItem] = useState<LootItem | null>(null);
   const [isLootDropModalOpen, setIsLootDropModalOpen] = useState(false);
   const [isRetroCartridgeOpen, setIsRetroCartridgeOpen] = useState(false);
+
+  // Sync with Android Home Screen Widget on app load
+  useEffect(() => {
+    BuffrWidgetBridge.sync();
+  }, []);
 
   // Real-time Cloud Firestore Subscription
   useEffect(() => {

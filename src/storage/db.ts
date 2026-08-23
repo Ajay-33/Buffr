@@ -10,6 +10,7 @@ import {
   RoutineChain,
 } from '../types';
 import { createDemoDataset, createFreshDataset, DEFAULT_ROUTINE_CHAINS } from '../data/initialData';
+import { BuffrWidgetBridge } from '../utils/widgetBridge';
 
 const DB_KEYS = {
   USER: 'buffr_user_profile',
@@ -46,6 +47,7 @@ export class BuffrStorage {
       this.saveRoutineChains(demoData.routineChains || DEFAULT_ROUTINE_CHAINS);
       localStorage.setItem(DB_KEYS.HAS_INITIALIZED, 'true');
       localStorage.setItem(DB_KEYS.ONBOARDING_DONE, 'true');
+      BuffrWidgetBridge.sync();
     }
   }
 
@@ -72,6 +74,7 @@ export class BuffrStorage {
     this.saveRoutineChains(demoData.routineChains || DEFAULT_ROUTINE_CHAINS);
     localStorage.removeItem(DB_KEYS.REFLECTIONS);
     localStorage.setItem(DB_KEYS.ONBOARDING_DONE, 'true');
+    BuffrWidgetBridge.sync();
   }
 
   public static resetToFresh(): void {
@@ -87,6 +90,7 @@ export class BuffrStorage {
     this.saveRoutineChains(freshData.routineChains || DEFAULT_ROUTINE_CHAINS);
     localStorage.removeItem(DB_KEYS.REFLECTIONS);
     localStorage.setItem(DB_KEYS.ONBOARDING_DONE, 'false');
+    BuffrWidgetBridge.sync();
   }
 
   // User Profile
@@ -114,6 +118,7 @@ export class BuffrStorage {
   public static saveUserProfile(user: UserProfile): void {
     if (!this.isBrowser()) return;
     localStorage.setItem(DB_KEYS.USER, JSON.stringify(user));
+    BuffrWidgetBridge.sync();
   }
 
   // Habits
@@ -133,6 +138,7 @@ export class BuffrStorage {
   public static saveHabits(habits: Habit[]): void {
     if (!this.isBrowser()) return;
     localStorage.setItem(DB_KEYS.HABITS, JSON.stringify(habits));
+    BuffrWidgetBridge.sync();
   }
 
   public static saveHabit(habit: Habit): void {
@@ -168,6 +174,7 @@ export class BuffrStorage {
   public static saveCompletions(completions: HabitCompletion[]): void {
     if (!this.isBrowser()) return;
     localStorage.setItem(DB_KEYS.COMPLETIONS, JSON.stringify(completions));
+    BuffrWidgetBridge.sync();
   }
 
   public static saveCompletion(completion: HabitCompletion): void {
@@ -204,6 +211,7 @@ export class BuffrStorage {
   public static saveXPTransactions(transactions: XPTransaction[]): void {
     if (!this.isBrowser()) return;
     localStorage.setItem(DB_KEYS.XP_TRANSACTIONS, JSON.stringify(transactions));
+    BuffrWidgetBridge.sync();
   }
 
   public static saveXPTransaction(tx: XPTransaction): void {

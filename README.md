@@ -43,7 +43,11 @@
 - **Adaptive Mobile Layout**: Automatically switches to an edge-to-edge, touch-optimized fullscreen view on mobile devices (`≤ 768px`) and offers an optional device frame toggle on desktop.
 - **Standalone PWA Ready**: Installable to Android & iOS home screens with standalone fullscreen display, offline caching, and custom app icons.
 
-### 🤖 Native Android Application
+### 🤖 Native Android Application & Home Screen Widgets
+- **Native Android Home Screen Widgets**:
+  - 📱 **Buffr Quest HUD (4x2 / 4x1)**: Glanceable daily quest counter, progress bars, real-time XP tracker, current level badge, combo streak flames, gold balance, and 1-tap quick launch action button into today's quests.
+  - 🔥 **Buffr Mini Streak Widget (2x2 / 2x1)**: Ultra-compact square widget highlighting active combo streak, hero level, and remaining daily habits count.
+  - 🔄 **Real-Time Dynamic Sync Bridge**: Automatically broadcasts habit completions, XP level-ups, and profile changes to the native Android widget manager via zero-lag local bridge.
 - **Native Firebase Auth**: Uses the `@capacitor-firebase/authentication` plugin for a seamless native Google Sign-In experience (bypasses WebView popup restrictions).
 - **High-Fidelity Branding**: Custom adaptive Android icons generated from the source SVG, ensuring the brand stays "intact" on all devices with matching theme colors.
 - **Optimized Performance**: Production-ready Proguard configurations and modernized Gradle build scripts.

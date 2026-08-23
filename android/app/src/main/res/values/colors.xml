@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#7C3AED</color>
+    <color name="colorPrimaryDark">#4C1D95</color>
+    <color name="colorAccent">#FACC15</color>
+
+    <!-- Buffr Retro Arcade Widget Palette -->
+    <color name="widget_bg">#090416</color>
+    <color name="widget_panel_bg">#150B2B</color>
+    <color name="widget_border">#2E185B</color>
+    <color name="widget_gold">#FACC15</color>
+    <color name="widget_gold_bg">#2E2505</color>
+    <color name="widget_cyan">#06B6D4</color>
+    <color name="widget_cyan_bg">#082635</color>
+    <color name="widget_emerald">#22C55E</color>
+    <color name="widget_pink">#EC4899</color>
+    <color name="widget_progress_track">#1E1038</color>
+    <color name="widget_text_primary">#FFFFFF</color>
+    <color name="widget_text_secondary">#CBD5E1</color>
+    <color name="widget_text_muted">#94A3B8</color>
+</resources>
