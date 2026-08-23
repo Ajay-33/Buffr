@@ -2,6 +2,7 @@
   "short_name": "Buffr",
   "name": "Buffr — Gamified Habit Tracker & Arcade HUD",
   "description": "Level up your life with habits, streaks, XP, attributes, quests, and analytics.",
+  "categories": ["lifestyle", "productivity", "health"],
   "icons": [
     {
       "src": "/icon.svg",
@@ -14,6 +15,29 @@
       "type": "image/svg+xml",
       "sizes": "192x192 512x512",
       "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Today's Quest Log",
+      "short_name": "Today",
+      "description": "Quick check-in for daily habits",
+      "url": "/?tab=today",
+      "icons": [{ "src": "/icon.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Daily Debrief",
+      "short_name": "Reflection",
+      "description": "Log your nightly reflection score",
+      "url": "/?modal=reflection",
+      "icons": [{ "src": "/icon.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Arcade HUD Widgets",
+      "short_name": "Widgets",
+      "description": "Open live companion widgets",
+      "url": "/?modal=widgets",
+      "icons": [{ "src": "/icon.svg", "sizes": "192x192" }]
     }
   ],
   "start_url": "/",

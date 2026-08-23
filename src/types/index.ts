@@ -101,7 +101,9 @@ export interface UserProfile {
   currentTitle: string;
   unlockedTitles?: string[];
   streakFreezes?: number;
-  streakFreezesRemaining?: number;
+  streakFreezesRemaining: number;
+  streakShieldActiveUntil?: string;
+  autoEquipHighestTitle?: boolean;
   longestStreak?: number;
   currentStreak: number;
   perfectDaysCount?: number;

@@ -28,6 +28,59 @@ export const DIFFICULTY_BASE_XP: Record<HabitDifficulty, number> = {
   extreme: 50,
 };
 
+export interface RankTier {
+  name: 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM' | 'DIAMOND' | 'MASTER' | 'GRANDMASTER' | 'MYTHIC';
+  minLevel: number;
+  maxLevel: number;
+  color: string;
+  badgeBg: string;
+  borderColor: string;
+  glowColor: string;
+  description: string;
+}
+
+export const RANK_TIERS: RankTier[] = [
+  { name: 'BRONZE', minLevel: 1, maxLevel: 4, color: '#cd7f32', badgeBg: 'bg-amber-950/80', borderColor: 'border-amber-700', glowColor: 'rgba(205,127,50,0.4)', description: 'Recruit: Building foundational habit routines' },
+  { name: 'SILVER', minLevel: 5, maxLevel: 9, color: '#c0c0c0', badgeBg: 'bg-slate-800/80', borderColor: 'border-slate-400', glowColor: 'rgba(192,192,192,0.4)', description: 'Builder: Solidifying consistency and daily discipline' },
+  { name: 'GOLD', minLevel: 10, maxLevel: 15, color: '#facc15', badgeBg: 'bg-yellow-950/80', borderColor: 'border-yellow-400', glowColor: 'rgba(250,204,21,0.5)', description: 'Disciplined: Strong habit resilience & high streak rate' },
+  { name: 'PLATINUM', minLevel: 16, maxLevel: 24, color: '#22d3ee', badgeBg: 'bg-cyan-950/80', borderColor: 'border-cyan-400', glowColor: 'rgba(34,211,238,0.5)', description: 'Relentless: Advanced habit momentum and focus' },
+  { name: 'DIAMOND', minLevel: 25, maxLevel: 34, color: '#a855f7', badgeBg: 'bg-purple-950/80', borderColor: 'border-purple-400', glowColor: 'rgba(168,85,247,0.5)', description: 'Ascended: Peak character attributes and mastery' },
+  { name: 'MASTER', minLevel: 35, maxLevel: 44, color: '#ec4899', badgeBg: 'bg-pink-950/80', borderColor: 'border-pink-500', glowColor: 'rgba(236,72,153,0.5)', description: 'Elite: Compound character transformation' },
+  { name: 'GRANDMASTER', minLevel: 45, maxLevel: 49, color: '#ef4444', badgeBg: 'bg-red-950/80', borderColor: 'border-red-500', glowColor: 'rgba(239,68,68,0.6)', description: 'Grandmaster: Unshakable iron willpower' },
+  { name: 'MYTHIC', minLevel: 50, maxLevel: 999, color: '#10b981', badgeBg: 'bg-emerald-950/80', borderColor: 'border-emerald-400', glowColor: 'rgba(16,185,129,0.7)', description: 'Mythic Buffr: Living legendary tier' },
+];
+
+export const getRankTier = (level: number): RankTier => {
+  return RANK_TIERS.find((r) => level >= r.minLevel && level <= r.maxLevel) || RANK_TIERS[0];
+};
+
+export const getHighestUnlockedTitle = (level: number): string => {
+  let highest = ALL_TITLES[0].title;
+  for (const t of ALL_TITLES) {
+    if (level >= t.level) {
+      highest = t.title;
+    }
+  }
+  return highest;
+};
+
+export const getUnlockedTitlesForLevel = (level: number): { title: string; requiredLevel: number; isUnlocked: boolean }[] => {
+  return ALL_TITLES.map((t) => ({
+    title: t.title,
+    requiredLevel: t.level,
+    isUnlocked: level >= t.level,
+  }));
+};
+
+export const isStreakShieldActive = (user?: Partial<UserProfile> | null): boolean => {
+  if (!user?.streakShieldActiveUntil) return false;
+  try {
+    return new Date(user.streakShieldActiveUntil).getTime() > Date.now();
+  } catch {
+    return false;
+  }
+};
+
 export const ALL_TITLES = [
   { level: 1, title: 'Starter' },
   { level: 3, title: 'Initiate' },

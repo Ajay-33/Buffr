@@ -140,7 +140,7 @@ export default function App() {
 
 
   // Onboarding completion
-  const handleFinishOnboarding = (selectedHabits: HabitTemplate[], userName: string) => {
+  const handleFinishOnboarding = (selectedHabits: HabitTemplate[], userName: string, avatarEmoji?: string) => {
     const newHabits: Habit[] = selectedHabits.map((tpl) => ({
       id: generateId('habit'),
       title: tpl.title,
@@ -167,6 +167,7 @@ export default function App() {
     const initialUser: UserProfile = {
       ...user,
       name: userName,
+      avatarEmoji: avatarEmoji || user.avatarEmoji || '👾',
       level: 1,
       totalXp: 0,
       currentStreak: 1,
@@ -329,9 +330,18 @@ export default function App() {
     if (isCompleted && (!existingComp || !existingComp.isCompleted)) {
       const h = habits.find((hb) => hb.id === habitId);
       if (h) {
+        const oldLevel = user.level;
         const nextTotalXp = user.totalXp + h.xpReward;
         const levelInfo = calculateLevelFromTotalXp(nextTotalXp);
-        const nextUser = { ...user, totalXp: nextTotalXp, level: levelInfo.level };
+        const nextUser = {
+          ...user,
+          totalXp: nextTotalXp,
+          level: levelInfo.level,
+          currentTitle:
+            levelInfo.level > oldLevel && levelInfo.titleUnlocked
+              ? levelInfo.titleUnlocked
+              : user.currentTitle,
+        };
         BuffrStorage.saveUser(nextUser);
         setUser(nextUser);
 
@@ -344,7 +354,15 @@ export default function App() {
         };
         BuffrStorage.saveXPTransaction(tx);
         setXpTransactions(BuffrStorage.getXpTransactions());
-        playCompletionSound();
+
+        if (levelInfo.level > oldLevel) {
+          setLevelUpNewLevel(levelInfo.level);
+          setLevelUpTitleUnlocked(levelInfo.titleUnlocked);
+          setIsLevelUpModalOpen(true);
+          playLevelUpSound();
+        } else {
+          playCompletionSound();
+        }
         triggerHapticPulse('medium');
 
         if (currentUser) {
@@ -401,9 +419,18 @@ export default function App() {
     setQuests(nextQuests);
 
     // Add XP
+    const oldLevel = user.level;
     const nextTotalXp = user.totalXp + targetQuest.xpReward;
     const levelInfo = calculateLevelFromTotalXp(nextTotalXp);
-    const nextUser = { ...user, totalXp: nextTotalXp, level: levelInfo.level };
+    const nextUser = {
+      ...user,
+      totalXp: nextTotalXp,
+      level: levelInfo.level,
+      currentTitle:
+        levelInfo.level > oldLevel && levelInfo.titleUnlocked
+          ? levelInfo.titleUnlocked
+          : user.currentTitle,
+    };
     BuffrStorage.saveUser(nextUser);
     setUser(nextUser);
 
@@ -415,7 +442,14 @@ export default function App() {
     });
     setXpTransactions(BuffrStorage.getXpTransactions());
 
-    playCelebrationSound();
+    if (levelInfo.level > oldLevel) {
+      setLevelUpNewLevel(levelInfo.level);
+      setLevelUpTitleUnlocked(levelInfo.titleUnlocked);
+      setIsLevelUpModalOpen(true);
+      playLevelUpSound();
+    } else {
+      playCelebrationSound();
+    }
     triggerHapticPulse('heavy');
   };
 

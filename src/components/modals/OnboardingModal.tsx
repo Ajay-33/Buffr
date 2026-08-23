@@ -16,7 +16,7 @@ import { playSound } from '../../utils/sound';
 
 interface OnboardingModalProps {
   isOpen: boolean;
-  onFinishOnboarding: (selectedHabits: HabitTemplate[], userName: string) => void;
+  onFinishOnboarding: (selectedHabits: HabitTemplate[], userName: string, avatarEmoji?: string) => void;
   onExploreDemo: () => void;
 }
 
@@ -38,6 +38,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
 }) => {
   const [step, setStep] = useState(1);
   const [name, setName] = useState('Alex');
+  const [avatarEmoji, setAvatarEmoji] = useState('👾');
   const [selectedCategories, setSelectedCategories] = useState<LifeCategory[]>([
     'Fitness',
     'Health',
@@ -75,7 +76,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
   const handleComplete = () => {
     playSound('levelup');
-    onFinishOnboarding(selectedHabits, name.trim() || 'Player 1');
+    onFinishOnboarding(selectedHabits, name.trim() || 'Player 1', avatarEmoji);
   };
 
   return (
@@ -118,18 +119,48 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                 </p>
               </div>
 
-              <div className="p-3.5 bg-[#090416] border-2 border-[#3b2d60] text-left space-y-2">
-                <label className="text-[9px] font-arcade text-yellow-400 uppercase tracking-wider block">
-                  ENTER PILOT CALLSIGN / HANDLE:
-                </label>
-                <input
-                  id="onboarding-input-name"
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="PLAYER 1"
-                  className="w-full bg-[#150b2e] border-2 border-[#3b2d60] px-3 py-2 text-xs font-arcade text-white focus:outline-none focus:border-yellow-400 uppercase"
-                />
+              <div className="p-3.5 bg-[#090416] border-2 border-[#3b2d60] text-left space-y-3">
+                <div>
+                  <label className="text-[9px] font-arcade text-yellow-400 uppercase tracking-wider block mb-1">
+                    ENTER PILOT CALLSIGN / HANDLE:
+                  </label>
+                  <input
+                    id="onboarding-input-name"
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="PLAYER 1"
+                    className="w-full bg-[#150b2e] border-2 border-[#3b2d60] px-3 py-2 text-xs font-arcade text-white focus:outline-none focus:border-yellow-400 uppercase"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[9px] font-arcade text-yellow-400 uppercase tracking-wider block mb-1.5">
+                    CHOOSE INITIAL PILOT AVATAR:
+                  </label>
+                  <div className="grid grid-cols-6 gap-2">
+                    {['👾', '🤖', '🥷', '🧙‍♂️', '🐺', '🦾', '🚀', '💎', '👑', '⚡', '🥋', '🛡️'].map((emoji) => (
+                      <button
+                        type="button"
+                        key={emoji}
+                        onClick={() => {
+                          playSound('click');
+                          setAvatarEmoji(emoji);
+                        }}
+                        className={`h-10 flex items-center justify-center text-xl border-2 transition-all ${
+                          avatarEmoji === emoji
+                            ? 'bg-[#1f1242] border-yellow-400 scale-105 shadow-[2px_2px_0px_#000]'
+                            : 'bg-[#150b2e] border-[#3b2d60] hover:border-slate-500'
+                        }`}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                  <span className="text-[8px] font-retro text-cyan-300 mt-1 block">
+                    (You can upload custom photos or choose preset characters anytime from your Pilot Profile)
+                  </span>
+                </div>
               </div>
 
               {/* Demo quick toggle button */}

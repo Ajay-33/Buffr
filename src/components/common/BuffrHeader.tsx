@@ -49,8 +49,14 @@ export const BuffrHeader: React.FC<BuffrHeaderProps> = ({
       <div className="max-w-4xl mx-auto flex items-center justify-between gap-1.5 sm:gap-2">
         {/* Brand identity - Arcade Style */}
         <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
-          <div className="relative flex-shrink-0 flex items-center justify-center w-7 h-7 sm:w-9 sm:h-9 bg-yellow-400 border-2 border-yellow-200 text-black shadow-[2px_2px_0px_#000]">
-            <Gamepad2 className="w-4 h-4 sm:w-5 sm:h-5 text-slate-950 stroke-[2.5]" />
+          <div className="relative flex-shrink-0 flex items-center justify-center w-7 h-7 sm:w-9 sm:h-9 bg-yellow-400 border-2 border-yellow-200 text-black shadow-[2px_2px_0px_#000] overflow-hidden">
+            {user.avatar ? (
+              <img src={user.avatar} alt="Pilot PFP" className="w-full h-full object-cover" />
+            ) : user.avatarEmoji ? (
+              <span className="text-sm sm:text-base">{user.avatarEmoji}</span>
+            ) : (
+              <Gamepad2 className="w-4 h-4 sm:w-5 sm:h-5 text-slate-950 stroke-[2.5]" />
+            )}
             <div className="absolute -top-1 -right-1 w-2 h-2 sm:w-2.5 sm:h-2.5 bg-red-500 border border-black animate-ping" />
             <div className="absolute -top-1 -right-1 w-2 h-2 sm:w-2.5 sm:h-2.5 bg-red-500 border border-black" />
           </div>
@@ -128,13 +134,13 @@ export const BuffrHeader: React.FC<BuffrHeaderProps> = ({
             <span>{user.streakFreezesRemaining ?? user.streakFreezes ?? 0}</span>
           </div>
 
-          {/* Widgets Simulator launcher - Visible on desktop */}
+          {/* Widgets & Android PWA launcher - Accessible on all viewports */}
           {onOpenWidgetSimulator && (
             <button
               id="header-btn-widgets"
               onClick={onOpenWidgetSimulator}
-              className="hidden md:flex p-1.5 sm:p-2 bg-[#1e143f] hover:bg-[#2c1d5e] border-2 border-cyan-500 text-cyan-300 shadow-[2px_2px_0px_#000] active:translate-y-0.5 transition-all"
-              title="Android Home-Screen Widgets Simulator"
+              className="flex p-1.5 sm:p-2 bg-[#1e143f] hover:bg-[#2c1d5e] border-2 border-cyan-500 text-cyan-300 shadow-[2px_2px_0px_#000] active:translate-y-0.5 transition-all"
+              title="Android Home-Screen Widgets & PWA Launcher"
             >
               <LayoutGrid className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-400" />
             </button>

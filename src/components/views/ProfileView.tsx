@@ -29,13 +29,23 @@ import {
   RefreshCw,
   AlertTriangle,
   X,
+  Lock,
+  Zap,
+  Camera,
+  LayoutGrid,
 } from 'lucide-react';
 import { Habit, UserProfile, XPTransaction } from '../../types';
-import { UNLOCKED_TITLES_POOL } from '../../data/initialData';
-import { calculateLevelFromTotalXp } from '../../utils/gamification';
+import {
+  calculateLevelFromTotalXp,
+  getRankTier,
+  getUnlockedTitlesForLevel,
+  isStreakShieldActive,
+  getHighestUnlockedTitle,
+} from '../../utils/gamification';
 import { exportDataAsJson, exportCompletionsAsCsv, importDataFromJson } from '../../storage/db';
 import { playSound } from '../../utils/sound';
 import { useAuth } from '../../firebase/AuthContext';
+import { AvatarPickerModal } from '../modals/AvatarPickerModal';
 
 
 interface ProfileViewProps {
@@ -68,6 +78,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onDataImportSuccess,
 }) => {
   const [isEditingName, setIsEditingName] = useState(false);
+  const [isAvatarPickerOpen, setIsAvatarPickerOpen] = useState(false);
   const [nameInput, setNameInput] = useState(user.name);
   const [habitFilter, setHabitFilter] = useState<'all' | 'active' | 'paused' | 'archived'>('all');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -94,6 +105,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
   const levelInfo = calculateLevelFromTotalXp(user.totalXp);
 
+  const rankTier = getRankTier(levelInfo.level);
+  const titleOptions = getUnlockedTitlesForLevel(levelInfo.level);
+  const isShieldActive = isStreakShieldActive(user);
+
   const handleNameSave = () => {
     if (nameInput.trim()) {
       playSound('click');
@@ -117,7 +132,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       onConfirm: () => {
         playSound('powerup');
         onUpdateUser({
-          streakFreezesRemaining: user.streakFreezesRemaining - 1,
+          streakFreezesRemaining: Math.max(0, (user.streakFreezesRemaining ?? 2) - 1),
+          streakShieldActiveUntil: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
         });
         showToast('⚡ COMBO SHIELD DEPLOYED! STREAK PROTECTED FOR 24H.');
       },
@@ -193,10 +209,52 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
       {/* Character Sheet Hero Box */}
       <div className="p-3.5 sm:p-5 bg-[#11092a] border-2 border-[#3b2d60] shadow-[3px_3px_0px_#05020a] space-y-4">
+        {/* Tier & Rank Header Banner */}
+        <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-[#090416] border border-[#2f2352]">
+          <div className="flex items-center space-x-2">
+            <span
+              className={`px-2 py-0.5 text-[9px] font-arcade border font-bold shadow-[2px_2px_0px_#000] ${rankTier.badgeBg} ${rankTier.borderColor}`}
+              style={{ color: rankTier.color }}
+            >
+              {rankTier.name} TIER
+            </span>
+            <span className="text-[10px] text-slate-400 font-arcade">
+              LV {rankTier.minLevel} - {rankTier.maxLevel === 999 ? '∞' : rankTier.maxLevel}
+            </span>
+          </div>
+
+          <div className="flex items-center space-x-1.5 text-[9px] font-retro text-cyan-300">
+            <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
+            <span>{rankTier.description}</span>
+          </div>
+        </div>
+
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center space-x-3.5">
-            <div className="w-14 h-14 bg-[#1f1242] border-2 border-yellow-400 flex items-center justify-center text-2xl shadow-[3px_3px_0px_#000]">
-              {user.avatarEmoji}
+            {/* Clickable Pilot Avatar / PFP with Hover Badge */}
+            <div
+              onClick={() => {
+                playSound('click');
+                setIsAvatarPickerOpen(true);
+              }}
+              className="relative group cursor-pointer"
+              title="Click to Change Pilot PFP / Avatar"
+            >
+              <div className="w-14 h-14 bg-[#1f1242] border-2 border-yellow-400 flex items-center justify-center shadow-[3px_3px_0px_#000] overflow-hidden group-hover:border-cyan-300 transition-all">
+                {user.avatar ? (
+                  <img
+                    src={user.avatar}
+                    alt={user.name || 'Pilot'}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-2xl">{user.avatarEmoji || '👾'}</span>
+                )}
+              </div>
+              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity text-yellow-300">
+                <Camera className="w-4 h-4" />
+                <span className="text-[7px] font-arcade mt-0.5">EDIT</span>
+              </div>
             </div>
 
             <div>
@@ -222,6 +280,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     <button
                       onClick={() => setIsEditingName(true)}
                       className="text-slate-400 hover:text-white"
+                      title="Edit Callsign"
                     >
                       <Edit className="w-3.5 h-3.5" />
                     </button>
@@ -230,51 +289,78 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 <span className="px-1.5 py-0.2 text-[8px] sm:text-[9px] font-arcade bg-green-500 text-black font-bold">
                   LV {levelInfo.level}
                 </span>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    playSound('click');
+                    setIsAvatarPickerOpen(true);
+                  }}
+                  className="px-1.5 py-0.5 bg-[#170e36] hover:bg-[#2c1d5e] border border-cyan-400 text-cyan-300 text-[8px] font-arcade flex items-center space-x-1 shadow-[1px_1px_0px_#000]"
+                  title="Change Pilot Profile Picture or Emoji Badge"
+                >
+                  <Camera className="w-2.5 h-2.5" />
+                  <span>CHANGE PFP</span>
+                </button>
               </div>
 
-              {/* Title Selector */}
-              <div className="flex items-center space-x-1.5 mt-1.5">
-                <Award className="w-3.5 h-3.5 text-yellow-400" />
-                <select
-                  id="user-title-select"
-                  value={user.currentTitle}
-                  onChange={(e) => {
-                    playSound('click');
-                    onUpdateUser({ currentTitle: e.target.value });
-                  }}
-                  className="bg-[#090416] border-2 border-[#3b2d60] text-yellow-400 text-[10px] font-arcade px-2 py-0.5 focus:outline-none focus:border-yellow-400 cursor-pointer"
-                >
-                  {UNLOCKED_TITLES_POOL.map((t) => (
-                    <option key={t} value={t}>
-                      {t.toUpperCase()}
-                    </option>
-                  ))}
-                </select>
+              {/* Title Selector (Only allows unlocked titles) */}
+              <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                <div className="flex items-center space-x-1 bg-[#090416] border border-[#3b2d60] px-2 py-0.5">
+                  <Award className="w-3 h-3 text-yellow-400" />
+                  <select
+                    id="user-title-select"
+                    value={user.currentTitle || 'Starter'}
+                    onChange={(e) => {
+                      playSound('click');
+                      onUpdateUser({ currentTitle: e.target.value, autoEquipHighestTitle: false });
+                    }}
+                    className="bg-transparent text-yellow-400 text-[10px] font-arcade focus:outline-none cursor-pointer"
+                  >
+                    {titleOptions.map((t) => (
+                      <option
+                        key={t.title}
+                        value={t.title}
+                        disabled={!t.isUnlocked}
+                        className={t.isUnlocked ? 'bg-[#090416] text-yellow-300' : 'bg-[#05020c] text-slate-600'}
+                      >
+                        {t.isUnlocked ? `★ ${t.title.toUpperCase()}` : `🔒 LV ${t.requiredLevel}: ${t.title.toUpperCase()}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <span className="text-[8px] font-retro text-slate-400">
+                  (Earned via Level & XP Progression)
+                </span>
               </div>
             </div>
           </div>
 
-          {/* Streak Freeze Bank */}
+          {/* Streak Freeze / Combo Shield Bank */}
           <div className="p-2.5 bg-[#090416] border-2 border-cyan-500 flex items-center justify-between sm:justify-start space-x-3 shadow-[2px_2px_0px_#000]">
             <div className="flex items-center space-x-2">
-              <Shield className="w-5 h-5 text-cyan-400" />
+              <Shield className={`w-5 h-5 ${isShieldActive ? 'text-green-400 animate-pulse' : 'text-cyan-400'}`} />
               <div>
                 <span className="text-[8px] font-arcade text-slate-400 block">
-                  COMBO SHIELD
+                  {isShieldActive ? 'SHIELD STATUS: ACTIVE' : 'COMBO SHIELD BANK'}
                 </span>
-                <span className="text-xs font-arcade text-cyan-300">
-                  x{user.streakFreezesRemaining} CHARGES
+                <span className={`text-xs font-arcade ${isShieldActive ? 'text-green-300' : 'text-cyan-300'}`}>
+                  {isShieldActive ? 'PROTECTED FOR 24H' : `x${user.streakFreezesRemaining ?? 2} CHARGES`}
                 </span>
               </div>
             </div>
 
-            <button
-              id="btn-use-streak-freeze"
-              onClick={handleUseStreakFreeze}
-              className="arcade-btn-cyan px-2.5 py-1 text-[9px] font-arcade"
-            >
-              DEPLOY
-            </button>
+            {!isShieldActive && (
+              <button
+                id="btn-use-streak-freeze"
+                onClick={handleUseStreakFreeze}
+                disabled={(user.streakFreezesRemaining ?? 2) <= 0}
+                className="arcade-btn-cyan px-2.5 py-1 text-[9px] font-arcade disabled:opacity-50"
+              >
+                DEPLOY
+              </button>
+            )}
           </div>
         </div>
 
@@ -283,7 +369,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           <div className="flex justify-between text-[9px] font-arcade text-slate-300">
             <span>PROGRESS TO LVL {levelInfo.level + 1}</span>
             <span className="text-yellow-400">
-              {levelInfo.currentLevelXp}/{levelInfo.nextLevelXpRequired} PTS ({levelInfo.progressPercent}%)
+              {levelInfo.currentLevelXp}/{levelInfo.nextLevelXpRequired} PTS ({levelInfo.progressPercent}%) • TOTAL XP: {user.totalXp.toLocaleString()}
             </span>
           </div>
           <div className="w-full bg-[#05020c] border border-[#3b2d60] h-3 p-0.5">
@@ -439,6 +525,38 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Android Widgets & Homescreen Quick Launch Section */}
+      <div className="p-3.5 sm:p-5 bg-[#11092a] border-2 border-cyan-500 shadow-[3px_3px_0px_#05020a] space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <LayoutGrid className="w-4 h-4 text-cyan-400" />
+            <h2 className="text-xs sm:text-sm font-arcade text-cyan-300">
+              ANDROID HOMESCREEN & ARCADE HUD WIDGETS
+            </h2>
+          </div>
+          <span className="text-[8px] font-arcade bg-cyan-950 text-cyan-300 border border-cyan-500 px-1.5 py-0.5">
+            PWA SHORTCUTS
+          </span>
+        </div>
+
+        <p className="text-[10px] font-retro text-slate-300 leading-relaxed">
+          Launch live 2x2 circular progress cards, 4x2 quick-dispatch quest checklists, or install Buffr as a standalone full-screen WebAPK with 1-tap long-press home screen shortcuts on Android.
+        </p>
+
+        <button
+          type="button"
+          id="btn-open-widgets-from-profile"
+          onClick={() => {
+            playSound('powerup');
+            onOpenWidgetSimulator();
+          }}
+          className="w-full py-2.5 bg-gradient-to-r from-cyan-900 to-blue-900 hover:from-cyan-800 hover:to-blue-800 border-2 border-cyan-400 text-cyan-200 text-[10px] font-arcade shadow-[3px_3px_0px_#000] active:translate-y-0.5 flex items-center justify-center space-x-2"
+        >
+          <Sparkles className="w-3.5 h-3.5 text-yellow-400 animate-pulse" />
+          <span>OPEN ANDROID HUD WIDGETS & SETUP GUIDE</span>
+        </button>
       </div>
 
       {/* App Preferences & Settings */}
@@ -735,6 +853,16 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </div>
         </div>
       )}
+      {/* Avatar / PFP Selection & Upload Modal */}
+      <AvatarPickerModal
+        isOpen={isAvatarPickerOpen}
+        user={user}
+        onUpdateAvatar={(data) => {
+          onUpdateUser(data);
+          showToast('👾 PILOT PFP / AVATAR CALIBRATED!');
+        }}
+        onClose={() => setIsAvatarPickerOpen(false)}
+      />
     </div>
   );
 };
