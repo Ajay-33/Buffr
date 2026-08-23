@@ -35,6 +35,7 @@ import { OnboardingModal } from './components/modals/OnboardingModal';
 import {
   calculateDailyScore,
   calculateLevelFromTotalXp,
+  calculateOverallStreak,
   checkAchievementsUnlock,
   generateId,
   calculateHabitStreak,
@@ -262,6 +263,14 @@ export default function App() {
       triggerHapticPulse('light');
     }
 
+    // Refresh completions & txs in state
+    const nextCompletions = BuffrStorage.getCompletions();
+    setCompletions(nextCompletions);
+    setXpTransactions(BuffrStorage.getXpTransactions());
+
+    // Calculate comprehensive streak & perfect days metrics
+    const streakStats = calculateOverallStreak(habits, nextCompletions);
+
     // Check Level Up
     const oldLevel = user.level;
     const levelInfo = calculateLevelFromTotalXp(nextTotalXp);
@@ -270,14 +279,16 @@ export default function App() {
       ...user,
       totalXp: nextTotalXp,
       level: levelInfo.level,
+      currentStreak: streakStats.currentStreak,
+      longestStreak: Math.max(user.longestStreak || 0, streakStats.longestStreak),
+      perfectDaysCount: streakStats.perfectDaysCount,
+      currentTitle:
+        levelInfo.level > oldLevel && levelInfo.titleUnlocked
+          ? levelInfo.titleUnlocked
+          : user.currentTitle,
     };
     BuffrStorage.saveUser(nextUser);
     setUser(nextUser);
-
-    // Refresh completions & txs in state
-    const nextCompletions = BuffrStorage.getCompletions();
-    setCompletions(nextCompletions);
-    setXpTransactions(BuffrStorage.getXpTransactions());
 
     // Trigger Level Up Celebration
     if (levelInfo.level > oldLevel) {
@@ -338,10 +349,14 @@ export default function App() {
         const oldLevel = user.level;
         const nextTotalXp = user.totalXp + h.xpReward;
         const levelInfo = calculateLevelFromTotalXp(nextTotalXp);
-        const nextUser = {
+        const streakStats = calculateOverallStreak(habits, nextCompletions);
+        const nextUser: UserProfile = {
           ...user,
           totalXp: nextTotalXp,
           level: levelInfo.level,
+          currentStreak: streakStats.currentStreak,
+          longestStreak: Math.max(user.longestStreak || 0, streakStats.longestStreak),
+          perfectDaysCount: streakStats.perfectDaysCount,
           currentTitle:
             levelInfo.level > oldLevel && levelInfo.titleUnlocked
               ? levelInfo.titleUnlocked
@@ -349,6 +364,7 @@ export default function App() {
         };
         BuffrStorage.saveUser(nextUser);
         setUser(nextUser);
+        updateQuestsAndAchievements(nextCompletions, nextUser);
 
         const tx: XPTransaction = {
           id: generateId('tx'),
