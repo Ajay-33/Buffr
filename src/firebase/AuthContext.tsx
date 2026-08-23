@@ -1,16 +1,19 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import {
-  User,
-  signInWithPopup,
+  User as FirebaseUser,
   signOut as firebaseSignOut,
   onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithCredential
 } from 'firebase/auth';
-import { auth, googleProvider } from './config';
+import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
+import { Capacitor } from '@capacitor/core';
+import { auth } from './config';
 import { FirestoreSyncService } from './firestoreService';
 import { BuffrStorage } from '../storage/db';
 
 interface AuthContextType {
-  currentUser: User | null;
+  currentUser: FirebaseUser | null;
   loading: boolean;
   isCloudSynced: boolean;
   syncStatus: 'idle' | 'syncing' | 'synced' | 'error';
@@ -22,18 +25,28 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log('Auth State Changed:', user ? `User: ${user.email}` : 'Signed Out');
       setCurrentUser(user);
       setLoading(false);
 
       if (user) {
         setSyncStatus('syncing');
-        // Push initial local data to cloud if new or sync down
+        // Update user profile if needed
+        const currentProfile = BuffrStorage.getUser();
+        if (user.displayName && (!currentProfile.name || currentProfile.name === 'Player 1' || currentProfile.name === 'Hero')) {
+          BuffrStorage.saveUser({
+            ...currentProfile,
+            name: user.displayName,
+            avatarEmoji: currentProfile.avatarEmoji || '🎮',
+          });
+        }
+
         const success = await FirestoreSyncService.pushAllToCloud(user.uid);
         setSyncStatus(success ? 'synced' : 'error');
       } else {
@@ -47,24 +60,35 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const signInWithGoogle = async () => {
     try {
       setLoading(true);
-      const result = await signInWithPopup(auth, googleProvider);
-      if (result.user) {
-        setSyncStatus('syncing');
-        // Update user profile with Google display name if available
-        const currentProfile = BuffrStorage.getUser();
-        if (result.user.displayName && (!currentProfile.name || currentProfile.name === 'Player 1' || currentProfile.name === 'Hero')) {
-          BuffrStorage.saveUser({
-            ...currentProfile,
-            name: result.user.displayName,
-            avatarEmoji: currentProfile.avatarEmoji || '🎮',
-          });
+
+      if (Capacitor.isNativePlatform()) {
+        // 1. Native Google Sign-In via Capacitor Plugin
+        console.log('Starting Native Google Sign-In...');
+        const result = await FirebaseAuthentication.signInWithGoogle();
+
+        if (result.user && result.credential?.idToken) {
+          console.log('Native Sign-In Successful, linking to Firebase JS SDK...');
+          // 2. Create Firebase Credential from the Native ID Token
+          const credential = GoogleAuthProvider.credential(result.credential.idToken);
+          // 3. Sign in to the JS SDK manually to trigger onAuthStateChanged
+          await signInWithCredential(auth, credential);
+          console.log('JS SDK Linked Successfully');
+        } else {
+          throw new Error('No user or ID token returned from native sign-in');
         }
-        await FirestoreSyncService.pushAllToCloud(result.user.uid);
-        setSyncStatus('synced');
+      } else {
+        // Web Fallback (handled by standard Firebase JS SDK)
+        const { signInWithPopup, GoogleAuthProvider: WebGoogleAuthProvider } = await import('firebase/auth');
+        const googleProvider = new WebGoogleAuthProvider();
+        await signInWithPopup(auth, googleProvider);
       }
     } catch (err: any) {
       console.error('Google Sign-In Error:', err);
       setSyncStatus('error');
+      // On mobile, native errors can be cryptic, so let's log the full object
+      if (Capacitor.isNativePlatform()) {
+        alert('Sign-In Failed: ' + (err.message || 'Unknown Error'));
+      }
     } finally {
       setLoading(false);
     }
@@ -72,6 +96,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const signOut = async () => {
     try {
+      if (Capacitor.isNativePlatform()) {
+        await FirebaseAuthentication.signOut();
+      }
       await firebaseSignOut(auth);
       setCurrentUser(null);
       setSyncStatus('idle');

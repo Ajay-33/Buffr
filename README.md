@@ -42,6 +42,11 @@
 ### 📱 Responsive Mobile Experience & PWA Shortcuts
 - **Adaptive Mobile Layout**: Automatically switches to an edge-to-edge, touch-optimized fullscreen view on mobile devices (`≤ 768px`) and offers an optional device frame toggle on desktop.
 - **Standalone PWA Ready**: Installable to Android & iOS home screens with standalone fullscreen display, offline caching, and custom app icons.
+
+### 🤖 Native Android Application
+- **Native Firebase Auth**: Uses the `@capacitor-firebase/authentication` plugin for a seamless native Google Sign-In experience (bypasses WebView popup restrictions).
+- **High-Fidelity Branding**: Custom adaptive Android icons generated from the source SVG, ensuring the brand stays "intact" on all devices with matching theme colors.
+- **Optimized Performance**: Production-ready Proguard configurations and modernized Gradle build scripts.
 - **Android Long-Press Quick Launchers**: 1-tap launcher shortcuts on supported home screens to jump straight into **Today's Quests** or **Daily Debrief**.
 
 ### 🎁 Dynamic Loot Drops & Rarities
