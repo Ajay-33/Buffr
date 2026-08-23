@@ -1,0 +1,55 @@
+name: Build Buffr APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: 
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24 # Upgraded to 24 to match GitHub Actions runner defaults and avoid deprecation noise
+          cache: 'npm'
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'zulu'
+          java-version: '21'
+          cache: 'gradle' # This will cache Gradle dependencies and speed up your builds!
+
+      - name: Install Node Dependencies
+        run: |
+          # We use --legacy-peer-deps to avoid any conflict during cross-platform resolution
+          npm install --include=optional
+
+      - name: Build Web App
+        run: npm run build
+
+      - name: Capacitor Sync
+        run: npx cap sync android
+
+      - name: Build APK via Gradle
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Rename and Prepare APK
+        run: |
+          mkdir -p build-output
+          cp android/app/build/outputs/apk/debug/app-debug.apk build-output/Buffr-v1.0-Beta.apk
+
+      - name: Upload Buffr Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: Buffr-Beta-Build
+          path: build-output/Buffr-v1.0-Beta.apk

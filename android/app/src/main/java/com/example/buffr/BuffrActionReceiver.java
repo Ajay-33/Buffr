@@ -77,7 +77,14 @@ public class BuffrActionReceiver extends BroadcastReceiver {
                 
                 // Sound and Haptic Feedback
                 try {
-                    android.os.Vibrator v = (android.os.Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+                    android.os.Vibrator v;
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                        android.os.VibratorManager vm = (android.os.VibratorManager) context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE);
+                        v = vm != null ? vm.getDefaultVibrator() : null;
+                    } else {
+                        v = (android.os.Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+                    }
+
                     if (v != null && v.hasVibrator()) {
                         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                             v.vibrate(android.os.VibrationEffect.createOneShot(50, android.os.VibrationEffect.DEFAULT_AMPLITUDE));
