@@ -1,49 +1,41 @@
 {
   "project_info": {
-    "project_number": "424855018399",
-    "project_id": "proud-caldron-8mbw7",
-    "storage_bucket": "proud-caldron-8mbw7.firebasestorage.app"
+    "project_number": "437703707130",
+    "project_id": "buffr-prod-bac0f",
+    "storage_bucket": "buffr-prod-bac0f.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:424855018399:android:154464a6306dd3bfc5fbaa",
+        "mobilesdk_app_id": "1:437703707130:android:4cfec5ca412a6c662ffc43",
         "android_client_info": {
           "package_name": "com.example.buffr"
         }
       },
       "oauth_client": [
         {
-          "client_id": "424855018399-dlgc12os9to3gjrr5ruor7929rnq5mm8.apps.googleusercontent.com",
+          "client_id": "437703707130-6v2jegcf2i6cuedahskjag2vt3f5e7qh.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.example.buffr",
-            "certificate_hash": "a1c32dad91274fc3649b4af205a3acec6f4d1cfd"
+            "certificate_hash": "4cd97fe3b2f7892d47569a42ff7668d6e60b84b5"
           }
         },
         {
-          "client_id": "424855018399-ci_fixed_debug.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.example.buffr",
-            "certificate_hash": "ceb1d40eca521acb15af392ab50cd1f1aa33ca07"
-          }
-        },
-        {
-          "client_id": "424855018399-gi05u4b1toh9ooanb6ujd2nea8jj9hci.apps.googleusercontent.com",
+          "client_id": "437703707130-pchb8gp40bdfh4pq4t0j758lcd6dep8d.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyAdrvVYsQ7NooIod5nfSd3KGZLDOjU9q_c"
+          "current_key": "AIzaSyAAyJsrlIeUtcxWHcumgTnnDIg3TDHbcdk"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "424855018399-gi05u4b1toh9ooanb6ujd2nea8jj9hci.apps.googleusercontent.com",
+              "client_id": "437703707130-pchb8gp40bdfh4pq4t0j758lcd6dep8d.apps.googleusercontent.com",
               "client_type": 3
             }
           ]
