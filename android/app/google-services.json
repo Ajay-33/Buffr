@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "424855018399",
+    "project_id": "proud-caldron-8mbw7",
+    "storage_bucket": "proud-caldron-8mbw7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:424855018399:android:154464a6306dd3bfc5fbaa",
+        "android_client_info": {
+          "package_name": "com.example.buffr"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "424855018399-dlgc12os9to3gjrr5ruor7929rnq5mm8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.buffr",
+            "certificate_hash": "a1c32dad91274fc3649b4af205a3acec6f4d1cfd"
+          }
+        },
+        {
+          "client_id": "424855018399-gi05u4b1toh9ooanb6ujd2nea8jj9hci.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAdrvVYsQ7NooIod5nfSd3KGZLDOjU9q_c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "424855018399-gi05u4b1toh9ooanb6ujd2nea8jj9hci.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

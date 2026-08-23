@@ -69,15 +69,6 @@ public class BuffrWidgetData {
                 BuffrDailyHUDWidget.updateAppWidget(context, appWidgetManager, widgetId);
             }
         }
-
-        // Update Quick Stat Mini Widgets
-        ComponentName statComponentName = new ComponentName(context, BuffrQuickStatWidget.class);
-        int[] statWidgetIds = appWidgetManager.getAppWidgetIds(statComponentName);
-        if (statWidgetIds != null && statWidgetIds.length > 0) {
-            for (int widgetId : statWidgetIds) {
-                BuffrQuickStatWidget.updateAppWidget(context, appWidgetManager, widgetId);
-            }
-        }
     }
 
     public static SharedPreferences getPrefs(Context context) {

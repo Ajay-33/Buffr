@@ -8,6 +8,6 @@
     <!-- Widget Labels -->
     <string name="widget_daily_hud_name">Buffr Quest HUD</string>
     <string name="widget_daily_hud_desc">Glanceable daily quest progress, XP bar, streaks, and level status.</string>
-    <string name="widget_quick_stat_name">Buffr Mini Streak</string>
-    <string name="widget_quick_stat_desc">Compact player level, streak counter, and quick quest launch.</string>
+    <string name="widget_quick_stat_name">Buffr Hero Card</string>
+    <string name="widget_quick_stat_desc">View your Hero callsign, rank, level, and streak status.</string>
 </resources>

@@ -44,12 +44,11 @@
 - **Standalone PWA Ready**: Installable to Android & iOS home screens with standalone fullscreen display, offline caching, and custom app icons.
 
 ### 🤖 Native Android Application & Home Screen Widgets
-- **Native Android Home Screen Widgets**:
-  - 📱 **Buffr Quest HUD (4x2 / 4x1)**: Glanceable daily quest counter, progress bars, real-time XP tracker, current level badge, combo streak flames, gold balance, and 1-tap quick launch action button into today's quests.
-  - 🔥 **Buffr Mini Streak Widget (2x2 / 2x1)**: Ultra-compact square widget highlighting active combo streak, hero level, and remaining daily habits count.
-  - 🔄 **Real-Time Dynamic Sync Bridge**: Automatically broadcasts habit completions, XP level-ups, and profile changes to the native Android widget manager via zero-lag local bridge.
+- **Interactive Scrollable Quests HUD**: A custom home screen widget that displays your character stats, XP bar, and a scrollable list of today's quests. Includes 1-tap quest toggling without opening the app.
+- **System Notifications & Action Buttons**: Scheduled morning briefings and evening streak protection alerts with interactive buttons (✅ Mark Done, ⏰ Snooze) that bridge directly to the app state.
 - **Native Firebase Auth**: Uses the `@capacitor-firebase/authentication` plugin for a seamless native Google Sign-In experience (bypasses WebView popup restrictions).
 - **High-Fidelity Branding**: Custom adaptive Android icons generated from the source SVG, ensuring the brand stays "intact" on all devices with matching theme colors.
+- **Real-Time Dynamic Sync Bridge**: Automatically broadcasts habit completions, XP level-ups, and profile changes to the native Android widget manager via zero-lag local bridge.
 - **Optimized Performance**: Production-ready Proguard configurations and modernized Gradle build scripts.
 - **Android Long-Press Quick Launchers**: 1-tap launcher shortcuts on supported home screens to jump straight into **Today's Quests** or **Daily Debrief**.
 
