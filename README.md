@@ -72,7 +72,43 @@
 
 ---
 
-## 🛠️ Tech Stack
+## 🛠️ Android Development Workflow
+
+Buffr uses **Capacitor** to bridge the React web application with the native Android environment.
+
+### How it Works (The Bridge)
+1.  **Web Layer**: Your UI and logic live in React (`src/`).
+2.  **The Sync**: `npx cap sync` copies your compiled web code into the Android project's `assets` folder.
+3.  **The Native Shell**: A Java-based Android Activity (`MainActivity.java`) loads a local WebView that renders your React app.
+4.  **The Plugins**: Features like Google Sign-In use native bridges to communicate between JavaScript and the Android OS.
+
+### Build & Deploy Steps
+If you make changes to the UI or add AI features in an external editor:
+
+1.  **Update Local Code**:
+    ```bash
+    git pull origin main
+    ```
+2.  **Build Web Assets**:
+    ```bash
+    npm run build
+    ```
+3.  **Sync with Android**:
+    ```bash
+    npx cap sync android
+    ```
+4.  **Generate APK**:
+    - Open the `android` folder in **Android Studio** and click **Run**.
+    - OR run via terminal:
+      ```bash
+      cd android && ./gradlew assembleDebug
+      ```
+
+### Finding the Output APK
+After a successful build, your installable file is located at:
+`android/app/build/outputs/apk/debug/app-debug.apk`
+
+---
 
 | Layer | Technologies |
 | :--- | :--- |
