@@ -69,13 +69,45 @@ public class BuffrActionReceiver extends BroadcastReceiver {
             int currentXp = prefs.getInt("current_xp", 0);
             int nextLevelXp = prefs.getInt("next_level_xp", 100);
             int gold = prefs.getInt("gold", 50);
+            int level = prefs.getInt("level", 1);
 
             if (newCompletedState) {
                 currentXp += habitXp;
                 gold += Math.max(1, habitXp / 2);
+                
+                // Sound and Haptic Feedback
+                try {
+                    android.os.Vibrator v = (android.os.Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+                    if (v != null && v.hasVibrator()) {
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                            v.vibrate(android.os.VibrationEffect.createOneShot(50, android.os.VibrationEffect.DEFAULT_AMPLITUDE));
+                        } else {
+                            v.vibrate(50);
+                        }
+                    }
+                    android.net.Uri notification = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION);
+                    android.media.Ringtone r = android.media.RingtoneManager.getRingtone(context, notification);
+                    r.play();
+                } catch (Exception e) { e.printStackTrace(); }
+
             } else {
                 currentXp = Math.max(0, currentXp - habitXp);
                 gold = Math.max(0, gold - Math.max(1, habitXp / 2));
+            }
+
+            // Level Up Logic
+            boolean leveledUp = false;
+            while (currentXp >= nextLevelXp) {
+                currentXp -= nextLevelXp;
+                level++;
+                nextLevelXp = level * 100; // Basic progression: 100, 200, 300...
+                leveledUp = true;
+            }
+            // Handle XP being negative (rare but possible if habit XP changes)
+            if (currentXp < 0 && level > 1) {
+                level--;
+                nextLevelXp = level * 100;
+                currentXp = nextLevelXp + currentXp; 
             }
 
             int xpPercent = nextLevelXp > 0 ? Math.min(100, Math.round(((float) currentXp / nextLevelXp) * 100)) : 0;
@@ -86,7 +118,9 @@ public class BuffrActionReceiver extends BroadcastReceiver {
             editor.putInt("quests_done", done);
             editor.putInt("quests_total", total);
             editor.putInt("quest_percent", percent);
+            editor.putInt("level", level);
             editor.putInt("current_xp", currentXp);
+            editor.putInt("next_level_xp", nextLevelXp);
             editor.putInt("xp_percent", xpPercent);
             editor.putInt("gold", gold);
 
@@ -100,14 +134,15 @@ public class BuffrActionReceiver extends BroadcastReceiver {
             pendingArray.put(pendingAction);
             editor.putString("pending_completions", pendingArray.toString());
 
-            editor.apply();
+            // Use commit() for widget actions to ensure data is written before AppWidgetManager refresh
+            editor.commit();
 
             // Refresh all widgets immediately
             BuffrWidgetData.updateAllWidgets(context);
 
             // Toast feedback
             String feedback = newCompletedState
-                ? "⚔️ Quest Complete: " + habitTitle + "! (+" + habitXp + " XP)"
+                ? (leveledUp ? "🌟 LEVEL UP! LVL " + level + " 🌟" : "⚔️ Quest Complete: " + habitTitle + "! (+" + habitXp + " XP)")
                 : "↩️ Quest Unchecked: " + habitTitle;
             Toast.makeText(context, feedback, Toast.LENGTH_SHORT).show();
 

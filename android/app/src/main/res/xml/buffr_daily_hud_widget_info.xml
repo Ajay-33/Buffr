@@ -8,6 +8,7 @@
     android:targetCellWidth="3"
     android:targetCellHeight="3"
     android:previewImage="@mipmap/ic_launcher"
+    android:previewLayout="@layout/buffr_daily_hud_widget"
     android:resizeMode="horizontal|vertical"
     android:updatePeriodMillis="1800000"
     android:widgetCategory="home_screen|keyguard" />

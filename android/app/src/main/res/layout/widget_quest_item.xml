@@ -5,18 +5,18 @@
     android:layout_height="wrap_content"
     android:gravity="center_vertical"
     android:orientation="horizontal"
-    android:paddingVertical="4dp"
-    android:paddingHorizontal="6dp">
+    android:paddingVertical="6dp"
+    android:paddingHorizontal="8dp">
 
     <TextView
         android:id="@+id/btn_check"
-        android:layout_width="22dp"
-        android:layout_height="22dp"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
         android:background="@drawable/widget_checkbox_bg"
         android:gravity="center"
         android:text="◻"
         android:textColor="@color/widget_cyan"
-        android:textSize="11sp"
+        android:textSize="14sp"
         android:textStyle="bold" />
 
     <TextView
