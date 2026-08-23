@@ -6,3 +6,9 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# IDE & Tooling
+.idea/
+.vscode/
+.artifacts/
+*.iml

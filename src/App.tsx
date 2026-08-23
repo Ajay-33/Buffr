@@ -85,10 +85,10 @@ export default function App() {
   const [isLootDropModalOpen, setIsLootDropModalOpen] = useState(false);
   const [isRetroCartridgeOpen, setIsRetroCartridgeOpen] = useState(false);
 
-  // Sync with Android Home Screen Widget on app load
+  // Sync with Android Home Screen Widget whenever relevant state changes
   useEffect(() => {
     BuffrWidgetBridge.sync();
-  }, []);
+  }, [user, habits, completions]);
 
   // Real-time Cloud Firestore Subscription
   useEffect(() => {
