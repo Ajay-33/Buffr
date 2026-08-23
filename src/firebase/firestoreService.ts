@@ -136,6 +136,26 @@ export class FirestoreSyncService {
     }
   }
 
+  // Push routine chain
+  public static async saveRoutineChain(userId: string, chain: any): Promise<void> {
+    try {
+      const ref = doc(db, 'users', userId, 'routine_chains', chain.id);
+      await setDoc(ref, chain, { merge: true });
+    } catch (err) {
+      console.warn('Firestore saveRoutineChain failed:', err);
+    }
+  }
+
+  // Delete routine chain
+  public static async deleteRoutineChain(userId: string, chainId: string): Promise<void> {
+    try {
+      const ref = doc(db, 'users', userId, 'routine_chains', chainId);
+      await deleteDoc(ref);
+    } catch (err) {
+      console.warn('Firestore deleteRoutineChain failed:', err);
+    }
+  }
+
   // Subscribe to real-time changes
   public static subscribeToUserData(
     userId: string,
@@ -144,6 +164,7 @@ export class FirestoreSyncService {
       habits?: Habit[];
       completions?: HabitCompletion[];
       reflections?: DailyReflection[];
+      routineChains?: any[];
     }) => void
   ): () => void {
     const unsubscribes: (() => void)[] = [];
@@ -215,6 +236,23 @@ export class FirestoreSyncService {
         }
       );
       unsubscribes.push(unsubRefs);
+
+      // 5. Routine Chains collection
+      const chainsCol = collection(db, 'users', userId, 'routine_chains');
+      const unsubChains = onSnapshot(
+        chainsCol,
+        (snap) => {
+          const chainsList: any[] = [];
+          snap.forEach((d) => chainsList.push(d.data()));
+          if (chainsList.length > 0) {
+            onDataUpdated({ routineChains: chainsList });
+          }
+        },
+        (err) => {
+          console.warn('Chains snapshot subscription note:', err?.message || err);
+        }
+      );
+      unsubscribes.push(unsubChains);
     } catch (err) {
       console.warn('Subscription setup error:', err);
     }

@@ -11,6 +11,8 @@ import {
   CheckCircle2,
   Sparkles,
   Loader2,
+  Zap,
+  Shield,
 } from 'lucide-react';
 import { UserProfile } from '../../types';
 import { useAuth } from '../../firebase/AuthContext';
@@ -24,6 +26,9 @@ interface BuffrHeaderProps {
   isDeviceFrameEnabled?: boolean;
   onOpenCreateHabit?: () => void;
   onOpenLevelUpModal?: () => void;
+  onOpenSkillTree?: () => void;
+  onOpenCartridge?: () => void;
+  onOpenVault?: () => void;
 }
 
 export const BuffrHeader: React.FC<BuffrHeaderProps> = ({
@@ -33,6 +38,9 @@ export const BuffrHeader: React.FC<BuffrHeaderProps> = ({
   onTogglePhoneFrame,
   onToggleDeviceFrame,
   isDeviceFrameEnabled,
+  onOpenSkillTree,
+  onOpenCartridge,
+  onOpenVault,
 }) => {
   const isFramed = isDeviceFrameEnabled ?? user.isPhoneFrame ?? false;
   const handleToggleFrame = onToggleDeviceFrame || onTogglePhoneFrame;
@@ -130,6 +138,43 @@ export const BuffrHeader: React.FC<BuffrHeaderProps> = ({
             <Heart className="w-3 h-3 text-pink-400 fill-pink-400" />
             <span>{user.streakFreezesRemaining ?? user.streakFreezes ?? 0}</span>
           </div>
+
+          {/* Quick Shortcuts: Cartridge, Skill Tree, Vault */}
+          {onOpenCartridge && (
+            <button
+              id="header-btn-cartridge"
+              onClick={onOpenCartridge}
+              className="p-1 sm:p-1.5 bg-[#1a0f35] hover:bg-[#2c1d5e] border-2 border-yellow-400 text-yellow-300 shadow-[2px_2px_0px_#000] active:translate-y-0.5 transition-all hidden xs:flex items-center space-x-1"
+              title="View Retro Game Cartridge & Export"
+            >
+              <Gamepad2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-yellow-400" />
+              <span className="text-[8px] font-arcade hidden sm:inline">WRAP</span>
+            </button>
+          )}
+
+          {onOpenSkillTree && (
+            <button
+              id="header-btn-skilltree"
+              onClick={onOpenSkillTree}
+              className="p-1 sm:p-1.5 bg-[#1a0f35] hover:bg-[#2c1d5e] border-2 border-purple-400 text-purple-300 shadow-[2px_2px_0px_#000] active:translate-y-0.5 transition-all flex items-center space-x-1"
+              title="Open Skill Tree Matrix"
+            >
+              <Zap className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-purple-400 fill-purple-400" />
+              <span className="text-[8px] font-arcade hidden sm:inline">SKILLS</span>
+            </button>
+          )}
+
+          {onOpenVault && (
+            <button
+              id="header-btn-vault"
+              onClick={onOpenVault}
+              className="p-1 sm:p-1.5 bg-[#1a0f35] hover:bg-[#2c1d5e] border-2 border-cyan-400 text-cyan-300 shadow-[2px_2px_0px_#000] active:translate-y-0.5 transition-all flex items-center space-x-1"
+              title="Open Hero Armory & Vault"
+            >
+              <Shield className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-cyan-400" />
+              <span className="text-[8px] font-arcade hidden sm:inline">VAULT</span>
+            </button>
+          )}
 
           {/* Sound Toggle */}
           {onToggleSound && (

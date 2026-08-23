@@ -59,6 +59,21 @@ export interface Habit {
   isArchived: boolean;
   createdAt: string;
   notes?: string;
+  order?: number;
+  routineChainId?: string;
+}
+
+export interface RoutineChain {
+  id: string;
+  title: string;
+  description?: string;
+  emoji: string;
+  color: string;
+  timeOfDay: TimeOfDay;
+  comboBonusXp: number;
+  habitIds: string[];
+  isArchived?: boolean;
+  order?: number;
 }
 
 export interface HabitCompletion {
@@ -114,6 +129,89 @@ export interface UserProfile {
   themeMode?: 'dark' | 'light' | 'system';
   isPhoneFrame?: boolean;
   onboardingCompleted?: boolean;
+  inventory?: LootItem[];
+  equippedGear?: EquippedGear;
+  skillTree?: UserSkillTreeState;
+}
+
+export type LootRarity =
+  | 'common'
+  | 'uncommon'
+  | 'rare'
+  | 'epic'
+  | 'legendary'
+  | 'mythic'
+  | 'artifact';
+
+export type LootSlotType = 'weapon' | 'armor' | 'relic' | 'charm';
+
+export interface LootStats {
+  xpBonusPercent?: number;
+  luckBonusPercent?: number;
+  strengthBoost?: number;
+  healthBoost?: number;
+  mindBoost?: number;
+  focusBoost?: number;
+  disciplineBoost?: number;
+  mindfulnessBoost?: number;
+  creativityBoost?: number;
+  socialBoost?: number;
+  financeBoost?: number;
+  streakShieldChance?: number;
+  freezeSlotsBonus?: number;
+  critXpChance?: number;
+}
+
+export interface LootItem {
+  id: string;
+  name: string;
+  subtitle: string;
+  description: string;
+  flavorText: string;
+  rarity: LootRarity;
+  slot: LootSlotType;
+  icon: string;
+  emoji: string;
+  stats: LootStats;
+  isEquipped?: boolean;
+  obtainedAt?: string;
+}
+
+export interface EquippedGear {
+  weapon?: LootItem | null;
+  armor?: LootItem | null;
+  relic?: LootItem | null;
+  charm?: LootItem | null;
+}
+
+export type SkillBranchId = 'warrior' | 'mage' | 'paladin' | 'monk' | 'rogue';
+
+export interface SkillNode {
+  id: string;
+  branch: SkillBranchId;
+  title: string;
+  subtitle: string;
+  description: string;
+  tier: 1 | 2 | 3;
+  cost: number;
+  icon: string;
+  emoji: string;
+  requiresNodeId?: string;
+  statsEffect: {
+    xpMultiplier?: number;
+    categoryBoost?: { category: LifeCategory; boostPercent: number };
+    morningBonusPercent?: number;
+    eveningBonusPercent?: number;
+    lootLuckBonus?: number;
+    streakRecoveryBonus?: boolean;
+    attributeFlatBonus?: { attr: keyof LifeAttributes; val: number };
+  };
+}
+
+export interface UserSkillTreeState {
+  unlockedNodeIds: string[];
+  totalSkillPointsEarned: number;
+  availableSkillPoints: number;
 }
 
 export interface LifeAttributes {

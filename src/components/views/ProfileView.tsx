@@ -34,7 +34,7 @@ import {
   Camera,
   LayoutGrid,
 } from 'lucide-react';
-import { Habit, UserProfile, XPTransaction } from '../../types';
+import { Habit, UserProfile, XPTransaction, LootItem, LootSlotType } from '../../types';
 import {
   calculateLevelFromTotalXp,
   getRankTier,
@@ -60,6 +60,10 @@ interface ProfileViewProps {
   onResetDemoData: () => void;
   onResetFreshData?: () => void;
   onDataImportSuccess: () => void;
+  onOpenCartridgeModal?: () => void;
+  onOpenSkillTree?: () => void;
+  onEquipItem?: (item: LootItem) => void;
+  onUnequipSlot?: (slot: LootSlotType) => void;
 }
 
 export const ProfileView: React.FC<ProfileViewProps> = ({
@@ -74,6 +78,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onResetDemoData,
   onResetFreshData,
   onDataImportSuccess,
+  onOpenCartridgeModal,
+  onOpenSkillTree,
+  onEquipItem,
+  onUnequipSlot,
 }) => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [isAvatarPickerOpen, setIsAvatarPickerOpen] = useState(false);
@@ -336,27 +344,47 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </div>
 
           {/* Streak Freeze / Combo Shield Bank */}
-          <div className="p-2.5 bg-[#090416] border-2 border-cyan-500 flex items-center justify-between sm:justify-start space-x-3 shadow-[2px_2px_0px_#000]">
-            <div className="flex items-center space-x-2">
-              <Shield className={`w-5 h-5 ${isShieldActive ? 'text-green-400 animate-pulse' : 'text-cyan-400'}`} />
-              <div>
-                <span className="text-[8px] font-arcade text-slate-400 block">
-                  {isShieldActive ? 'SHIELD STATUS: ACTIVE' : 'COMBO SHIELD BANK'}
-                </span>
-                <span className={`text-xs font-arcade ${isShieldActive ? 'text-green-300' : 'text-cyan-300'}`}>
-                  {isShieldActive ? 'PROTECTED FOR 24H' : `x${user.streakFreezesRemaining ?? 2} CHARGES`}
-                </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="p-2.5 bg-[#090416] border-2 border-cyan-500 flex items-center justify-between sm:justify-start space-x-3 shadow-[2px_2px_0px_#000]">
+              <div className="flex items-center space-x-2">
+                <Shield className={`w-5 h-5 ${isShieldActive ? 'text-green-400 animate-pulse' : 'text-cyan-400'}`} />
+                <div>
+                  <span className="text-[8px] font-arcade text-slate-400 block">
+                    {isShieldActive ? 'SHIELD STATUS: ACTIVE' : 'COMBO SHIELD BANK'}
+                  </span>
+                  <span className={`text-xs font-arcade ${isShieldActive ? 'text-green-300' : 'text-cyan-300'}`}>
+                    {isShieldActive ? 'PROTECTED FOR 24H' : `x${user.streakFreezesRemaining ?? 2} CHARGES`}
+                  </span>
+                </div>
               </div>
+
+              {!isShieldActive && (
+                <button
+                  id="btn-use-streak-freeze"
+                  onClick={handleUseStreakFreeze}
+                  disabled={(user.streakFreezesRemaining ?? 2) <= 0}
+                  className="arcade-btn-cyan px-2.5 py-1 text-[9px] font-arcade disabled:opacity-50"
+                >
+                  DEPLOY
+                </button>
+              )}
             </div>
 
-            {!isShieldActive && (
+            {onOpenCartridgeModal && (
               <button
-                id="btn-use-streak-freeze"
-                onClick={handleUseStreakFreeze}
-                disabled={(user.streakFreezesRemaining ?? 2) <= 0}
-                className="arcade-btn-cyan px-2.5 py-1 text-[9px] font-arcade disabled:opacity-50"
+                id="btn-profile-cartridge-wrap"
+                onClick={() => {
+                  playSound('powerup');
+                  onOpenCartridgeModal();
+                }}
+                className="p-2.5 bg-[#170c30] hover:bg-[#25144f] border-2 border-yellow-400 text-yellow-300 flex items-center space-x-2 shadow-[2px_2px_0px_#000] active:translate-y-0.5 transition-all cursor-pointer"
+                title="Generate and download shareable Retro Cartridge Wrap"
               >
-                DEPLOY
+                <Gamepad2 className="w-5 h-5 text-yellow-400 animate-bounce" />
+                <div className="text-left">
+                  <span className="text-[8px] font-arcade text-slate-400 block">SHAREABLE CARD</span>
+                  <span className="text-xs font-arcade text-yellow-300">RETRO CARTRIDGE 🕹️</span>
+                </div>
               </button>
             )}
           </div>

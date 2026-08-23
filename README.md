@@ -44,6 +44,27 @@
 - **Standalone PWA Ready**: Installable to Android & iOS home screens with standalone fullscreen display, offline caching, and custom app icons.
 - **Android Long-Press Quick Launchers**: 1-tap launcher shortcuts on supported home screens to jump straight into **Today's Quests** or **Daily Debrief**.
 
+### 🎁 Dynamic Loot Drops & Rarities
+- **Procedural Loot Engine**: Completing habits dynamically rolls for rare gear drops based on difficulty, streaks, and perfect days (high-variance, unpredictable loot pool).
+- **6-Tier Rarity Scale**: *Common* (Grey), *Uncommon* (Emerald), *Rare* (Cyan), *Epic* (Purple), *Legendary* (Gold), and *Mythic* (Hot Pink / Crimson).
+- **Equippable Inventory Slots**: Weapons, Armor, Relics, and Consumables that bestow real passive gameplay modifiers (e.g. `+15% XP`, `+5% Crit XP Chance`, `+12% Shield Recovery Rate`).
+- **Interactive Loot Discovery Modal**: Full pixel art item unboxing animation with sound effects and instant equip/store options.
+
+### 🌳 4-Branch Interactive Skill Trees
+- **Deep Progression Paths**: Spend Skill Points earned from leveling up to unlock permanent passive buffs:
+  - 🛡️ **Iron Will (Discipline)**: Boosts streak shields, streak XP multipliers, and anti-lapse resistance.
+  - ⚡ **Kinetic Overclock (Fitness & Energy)**: Provides critical hit XP chance, recovery boosts, and physical stamina bonuses.
+  - 🧠 **Neuro-Synapse (Focus & Wisdom)**: Unlocks morning dawn XP boosts, deep work multipliers, and tactical insights.
+  - ⏳ **Chrono-Mastery (Consistency & Momentum)**: Grants weekend momentum protection, retrospective backfill grace, and evening wind-down bonuses.
+
+### 🎒 Pixel Art Armory & Vault
+- **Active Loadout HUD**: Equip collected weapons, shields, boots, and legendary artifacts to augment your pilot stats.
+- **Vault Filtering & Sorting**: Filter items by rarity (*All*, *Common*, *Rare*, *Epic*, *Legendary*, *Mythic*) or gear type (*Weapon*, *Armor*, *Relic*, *Consumable*).
+
+### 🕹️ 16-Bit Retro Cartridge Shareable Wrap
+- **Shareable Vintage Cartridge**: Generate an authentic 90s-style Game Boy / SNES physical cartridge summary card featuring your pilot callsign, tier, completion count, longest streak, and top guild.
+- **High-Res Canvas PNG Download**: 1-click download of your personalized retro cartridge to share on Twitter/X, Discord, or Instagram stories.
+
 ---
 
 ## 🛠️ Tech Stack

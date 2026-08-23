@@ -11,7 +11,15 @@ import {
   ChevronRight,
   Gamepad2,
 } from 'lucide-react';
-import { Habit, HabitCompletion, UserProfile, LifeCategory } from '../../types';
+import {
+  Habit,
+  HabitCompletion,
+  UserProfile,
+  LifeCategory,
+  UserSkillTreeState,
+  LootItem,
+  LootSlotType,
+} from '../../types';
 import { BuffrRadarChart } from '../common/BuffrRadarChart';
 import {
   calculateLifeAttributes,
@@ -20,12 +28,20 @@ import {
   calculateOverallStreak,
 } from '../../utils/gamification';
 import { getDaysAgo, parseDateStr } from '../../utils/dateUtils';
+import { SkillTreeView } from './SkillTreeView';
+import { VaultInventoryView } from './VaultInventoryView';
+import { calculateTotalSkillPoints } from '../../data/skillTreeData';
+import { playSound } from '../../utils/sound';
 
 interface ProgressViewProps {
   user: UserProfile;
   habits: Habit[];
   completions: HabitCompletion[];
   onOpenWeeklyReview: () => void;
+  onUpdateSkillTree?: (updated: UserSkillTreeState) => void;
+  onOpenCartridgeModal?: () => void;
+  onEquipItem?: (item: LootItem) => void;
+  onUnequipSlot?: (slot: LootSlotType) => void;
 }
 
 export const ProgressView: React.FC<ProgressViewProps> = ({
@@ -33,11 +49,22 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
   habits,
   completions,
   onOpenWeeklyReview,
+  onUpdateSkillTree,
+  onOpenCartridgeModal,
+  onEquipItem,
+  onUnequipSlot,
 }) => {
+  const [activeSubTab, setActiveSubTab] = useState<'stats' | 'skills' | 'vault'>('stats');
   const [periodDays, setPeriodDays] = useState<7 | 30 | 90 | 365>(30);
-  const attributes = calculateLifeAttributes(habits, completions);
+  const attributes = calculateLifeAttributes(habits, completions, user);
   const insights = generateInsights(habits, completions);
   const overallStreakStats = calculateOverallStreak(habits, completions);
+
+  const totalEarnedSP = calculateTotalSkillPoints(user);
+  const availableSP = Math.max(
+    0,
+    totalEarnedSP - (user.skillTree?.unlockedNodeIds?.length || 0)
+  );
 
   // Period stats calculation
   let periodScheduled = 0;
@@ -85,7 +112,86 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
 
   return (
     <div id="progress-view-container" className="p-3 sm:p-6 max-w-4xl mx-auto space-y-4 sm:space-y-6 pb-28">
-      {/* Header & Period Filters */}
+      {/* Sub-Navigation Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-2 bg-[#090416] p-1.5 border-2 border-[#3b2d60] shadow-[2px_2px_0px_#05020a]">
+        <div className="flex items-center space-x-1 sm:space-x-2">
+          <button
+            id="tab-progress-stats"
+            onClick={() => {
+              playSound('click');
+              setActiveSubTab('stats');
+            }}
+            className={`px-3 py-1.5 font-arcade text-[9px] sm:text-xs flex items-center space-x-1.5 transition-all ${
+              activeSubTab === 'stats'
+                ? 'bg-yellow-400 text-black font-bold shadow-[2px_2px_0px_#000]'
+                : 'text-slate-400 hover:text-white bg-[#120a28] border border-slate-700'
+            }`}
+          >
+            <TrendingUp className="w-3.5 h-3.5" />
+            <span>RADAR & STATS</span>
+          </button>
+
+          <button
+            id="tab-progress-skills"
+            onClick={() => {
+              playSound('click');
+              setActiveSubTab('skills');
+            }}
+            className={`px-3 py-1.5 font-arcade text-[9px] sm:text-xs flex items-center space-x-1.5 transition-all ${
+              activeSubTab === 'skills'
+                ? 'bg-purple-500 text-white font-bold shadow-[2px_2px_0px_#000]'
+                : 'text-slate-400 hover:text-white bg-[#120a28] border border-slate-700'
+            }`}
+          >
+            <Zap className="w-3.5 h-3.5 text-yellow-300 fill-yellow-300" />
+            <span>SKILL TREE ({availableSP} SP)</span>
+          </button>
+
+          <button
+            id="tab-progress-vault"
+            onClick={() => {
+              playSound('click');
+              setActiveSubTab('vault');
+            }}
+            className={`px-3 py-1.5 font-arcade text-[9px] sm:text-xs flex items-center space-x-1.5 transition-all ${
+              activeSubTab === 'vault'
+                ? 'bg-cyan-500 text-black font-bold shadow-[2px_2px_0px_#000]'
+                : 'text-slate-400 hover:text-white bg-[#120a28] border border-slate-700'
+            }`}
+          >
+            <Shield className="w-3.5 h-3.5" />
+            <span>ARMORY & VAULT</span>
+          </button>
+        </div>
+
+        {onOpenCartridgeModal && (
+          <button
+            id="btn-open-cartridge-wrap"
+            onClick={() => {
+              playSound('powerup');
+              onOpenCartridgeModal();
+            }}
+            className="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 text-black font-arcade text-[9px] sm:text-xs font-bold border border-yellow-200 shadow-[2px_2px_0px_#000] active:translate-y-0.5 flex items-center space-x-1.5"
+          >
+            <Gamepad2 className="w-3.5 h-3.5" />
+            <span>CARTRIDGE WRAP 🕹️</span>
+          </button>
+        )}
+      </div>
+
+      {activeSubTab === 'skills' && onUpdateSkillTree ? (
+        <SkillTreeView user={user} onUpdateSkillTree={onUpdateSkillTree} />
+      ) : activeSubTab === 'vault' && onEquipItem && onUnequipSlot ? (
+        <VaultInventoryView
+          user={user}
+          inventory={user.inventory || []}
+          equippedGear={user.equippedGear || {}}
+          onEquipItem={onEquipItem}
+          onUnequipSlot={onUnequipSlot}
+        />
+      ) : (
+        <>
+          {/* Header & Period Filters */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#11092a] border-2 border-[#3b2d60] p-3 sm:p-4 shadow-[3px_3px_0px_#05020a]">
         <div>
           <h1 className="text-base sm:text-lg font-arcade text-yellow-400 tracking-wider flex items-center space-x-2">
@@ -313,6 +419,8 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
           ))}
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 };

@@ -7,8 +7,9 @@ import {
   Challenge,
   Quest,
   DailyReflection,
+  RoutineChain,
 } from '../types';
-import { createDemoDataset, createFreshDataset } from '../data/initialData';
+import { createDemoDataset, createFreshDataset, DEFAULT_ROUTINE_CHAINS } from '../data/initialData';
 
 const DB_KEYS = {
   USER: 'buffr_user_profile',
@@ -19,6 +20,7 @@ const DB_KEYS = {
   CHALLENGES: 'buffr_challenges',
   QUESTS: 'buffr_quests',
   REFLECTIONS: 'buffr_reflections',
+  ROUTINE_CHAINS: 'buffr_routine_chains',
   HAS_INITIALIZED: 'buffr_db_init_v2',
   ONBOARDING_DONE: 'buffr_onboarding_done_v2',
 };
@@ -41,6 +43,7 @@ export class BuffrStorage {
       this.saveAchievements(demoData.achievements);
       this.saveChallenges(demoData.challenges);
       this.saveQuests(demoData.quests);
+      this.saveRoutineChains(demoData.routineChains || DEFAULT_ROUTINE_CHAINS);
       localStorage.setItem(DB_KEYS.HAS_INITIALIZED, 'true');
       localStorage.setItem(DB_KEYS.ONBOARDING_DONE, 'true');
     }
@@ -66,6 +69,7 @@ export class BuffrStorage {
     this.saveAchievements(demoData.achievements);
     this.saveChallenges(demoData.challenges);
     this.saveQuests(demoData.quests);
+    this.saveRoutineChains(demoData.routineChains || DEFAULT_ROUTINE_CHAINS);
     localStorage.removeItem(DB_KEYS.REFLECTIONS);
     localStorage.setItem(DB_KEYS.ONBOARDING_DONE, 'true');
   }
@@ -80,6 +84,7 @@ export class BuffrStorage {
     this.saveAchievements(freshData.achievements);
     this.saveChallenges(freshData.challenges);
     this.saveQuests(freshData.quests);
+    this.saveRoutineChains(freshData.routineChains || DEFAULT_ROUTINE_CHAINS);
     localStorage.removeItem(DB_KEYS.REFLECTIONS);
     localStorage.setItem(DB_KEYS.ONBOARDING_DONE, 'false');
   }
@@ -296,6 +301,42 @@ export class BuffrStorage {
     this.saveReflections(list);
   }
 
+  // Routine Chains (Mini Combos)
+  public static getRoutineChains(): RoutineChain[] {
+    if (!this.isBrowser()) return DEFAULT_ROUTINE_CHAINS;
+    const data = localStorage.getItem(DB_KEYS.ROUTINE_CHAINS);
+    if (data) {
+      try {
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch {
+        return DEFAULT_ROUTINE_CHAINS;
+      }
+    }
+    return DEFAULT_ROUTINE_CHAINS;
+  }
+
+  public static saveRoutineChains(chains: RoutineChain[]): void {
+    if (!this.isBrowser()) return;
+    localStorage.setItem(DB_KEYS.ROUTINE_CHAINS, JSON.stringify(chains));
+  }
+
+  public static saveRoutineChain(chain: RoutineChain): void {
+    const chains = this.getRoutineChains();
+    const idx = chains.findIndex((c) => c.id === chain.id);
+    if (idx >= 0) {
+      chains[idx] = chain;
+    } else {
+      chains.push(chain);
+    }
+    this.saveRoutineChains(chains);
+  }
+
+  public static deleteRoutineChain(chainId: string): void {
+    const chains = this.getRoutineChains().filter((c) => c.id !== chainId);
+    this.saveRoutineChains(chains);
+  }
+
   // Export JSON
   public static exportJSON(): string {
     const exportData = {
@@ -307,8 +348,9 @@ export class BuffrStorage {
       challenges: this.getChallenges(),
       quests: this.getQuests(),
       reflections: this.getReflections(),
+      routineChains: this.getRoutineChains(),
       exportedAt: new Date().toISOString(),
-      version: '1.0.0',
+      version: '1.1.0',
     };
     return JSON.stringify(exportData, null, 2);
   }
@@ -345,6 +387,7 @@ export class BuffrStorage {
       if (data.challenges) this.saveChallenges(data.challenges);
       if (data.quests) this.saveQuests(data.quests);
       if (data.reflections) this.saveReflections(data.reflections);
+      if (data.routineChains) this.saveRoutineChains(data.routineChains);
       return true;
     } catch (err) {
       console.error('Import failed', err);

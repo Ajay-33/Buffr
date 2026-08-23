@@ -33,7 +33,11 @@ export const playSound = (
     | 'freeze'
     | 'miss'
     | 'powerup'
-    | 'gameover',
+    | 'gameover'
+    | 'loot'
+    | 'legendary'
+    | 'skill'
+    | 'equip',
   enabled = true
 ) => {
   if (!enabled) return;
@@ -162,6 +166,74 @@ export const playSound = (
       gain.connect(ctx.destination);
       osc.start(now);
       osc.stop(now + 0.25);
+    } else if (type === 'loot') {
+      // Mystery chest / Loot Pod opening sound (ascending resonant arpeggio)
+      const freqs = [392.0, 523.25, 659.25, 783.99, 1046.5];
+      freqs.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.05);
+        gain.gain.setValueAtTime(0.12, now + idx * 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.05 + 0.2);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + idx * 0.05);
+        osc.stop(now + idx * 0.05 + 0.22);
+      });
+    } else if (type === 'legendary') {
+      // Grand epic/mythic/artifact fanfare
+      const melody = [
+        { f: 523.25, d: 0.08 },
+        { f: 659.25, d: 0.08 },
+        { f: 783.99, d: 0.08 },
+        { f: 1046.5, d: 0.12 },
+        { f: 1318.51, d: 0.25 },
+        { f: 1567.98, d: 0.4 },
+      ];
+      let offset = 0;
+      melody.forEach((m) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(m.f, now + offset);
+        gain.gain.setValueAtTime(0.16, now + offset);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + offset + m.d);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + offset);
+        osc.stop(now + offset + m.d + 0.02);
+        offset += m.d * 0.85;
+      });
+    } else if (type === 'skill') {
+      // Skill point unlocked chime
+      const freqs = [440, 659.25, 880, 1318.51];
+      freqs.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.06);
+        gain.gain.setValueAtTime(0.14, now + idx * 0.06);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.06 + 0.35);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + idx * 0.06);
+        osc.stop(now + idx * 0.06 + 0.36);
+      });
+    } else if (type === 'equip') {
+      // Metallic retro click
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(600, now);
+      osc.frequency.setValueAtTime(1200, now + 0.02);
+      osc.frequency.setValueAtTime(900, now + 0.04);
+      gain.gain.setValueAtTime(0.1, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.07);
     } else if (type === 'miss' || type === 'gameover') {
       // Retro error / defeat sound
       const osc = ctx.createOscillator();

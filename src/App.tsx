@@ -8,6 +8,10 @@ import {
   Achievement,
   XPTransaction,
   DailyReflection,
+  LootItem,
+  LootSlotType,
+  UserSkillTreeState,
+  RoutineChain,
 } from './types';
 import { BuffrStorage } from './storage/db';
 import { BuffrHeader } from './components/common/BuffrHeader';
@@ -29,8 +33,10 @@ import { PerfectDayModal } from './components/modals/PerfectDayModal';
 import { DailyReflectionModal } from './components/modals/DailyReflectionModal';
 import { WeeklyReviewModal } from './components/modals/WeeklyReviewModal';
 import { OnboardingModal } from './components/modals/OnboardingModal';
+import { LootDropModal } from './components/modals/LootDropModal';
+import { RetroCartridgeModal } from './components/modals/RetroCartridgeModal';
 
-// Utils
+// Utils & RPG Engines
 import {
   calculateDailyScore,
   calculateLevelFromTotalXp,
@@ -47,10 +53,13 @@ import {
   playLevelUpSound,
   playCelebrationSound,
   triggerHapticPulse,
+  playSound,
 } from './utils/sound';
 import { HabitTemplate, createFreshDataset } from './data/initialData';
 import { useAuth } from './firebase/AuthContext';
 import { FirestoreSyncService } from './firebase/firestoreService';
+import { rollForLootDrop, calculateEquippedBuffs } from './data/lootPool';
+import { calculateSkillTreeBonuses } from './data/skillTreeData';
 
 export default function App() {
   const { currentUser } = useAuth();
@@ -68,6 +77,12 @@ export default function App() {
   const [achievements, setAchievements] = useState<Achievement[]>(() => BuffrStorage.getAchievements());
   const [xpTransactions, setXpTransactions] = useState<XPTransaction[]>(() => BuffrStorage.getXpTransactions());
   const [reflections, setReflections] = useState<DailyReflection[]>(() => BuffrStorage.getReflections());
+  const [routineChains, setRoutineChains] = useState<RoutineChain[]>(() => BuffrStorage.getRoutineChains());
+
+  // RPG & Loot Modals State
+  const [pendingLootItem, setPendingLootItem] = useState<LootItem | null>(null);
+  const [isLootDropModalOpen, setIsLootDropModalOpen] = useState(false);
+  const [isRetroCartridgeOpen, setIsRetroCartridgeOpen] = useState(false);
 
   // Real-time Cloud Firestore Subscription
   useEffect(() => {
@@ -92,6 +107,10 @@ export default function App() {
       if (cloudData.reflections && cloudData.reflections.length > 0) {
         setReflections(cloudData.reflections);
         BuffrStorage.saveReflections(cloudData.reflections);
+      }
+      if (cloudData.routineChains && cloudData.routineChains.length > 0) {
+        setRoutineChains(cloudData.routineChains);
+        BuffrStorage.saveRoutineChains(cloudData.routineChains);
       }
     });
 
@@ -125,6 +144,7 @@ export default function App() {
     setAchievements(BuffrStorage.getAchievements());
     setXpTransactions(BuffrStorage.getXpTransactions());
     setReflections(BuffrStorage.getReflections());
+    setRoutineChains(BuffrStorage.getRoutineChains());
   };
 
   // User state updates
@@ -228,20 +248,52 @@ export default function App() {
 
     BuffrStorage.saveCompletion(updatedComp);
 
-    // Calculate XP delta
+    // Calculate XP delta & RPG Bonuses
     let nextTotalXp = user.totalXp;
+    let droppedLoot: LootItem | null = null;
+    let isCrit = false;
+
     if (willBeCompleted) {
       // Habit streak bonus
       const streakInfo = calculateHabitStreak(targetHabit, completions);
       const streakBonus = Math.min(15, streakInfo.currentStreak * 2);
-      const earnedXp = targetHabit.xpReward + streakBonus;
+
+      // Gear & Skill tree buffs
+      const gearBuffs = calculateEquippedBuffs(user.equippedGear);
+      const skillBonuses = calculateSkillTreeBonuses(user.skillTree);
+
+      let earnedXp = targetHabit.xpReward + streakBonus;
+
+      // Gear bonus %
+      if (gearBuffs.xpBonusPercent > 0) {
+        earnedXp += Math.round(targetHabit.xpReward * (gearBuffs.xpBonusPercent / 100));
+      }
+
+      // Skill Tree Multiplier
+      earnedXp = Math.round(earnedXp * skillBonuses.xpMultiplier);
+
+      // Morning / Evening Boosts
+      const currentHour = new Date().getHours();
+      if (currentHour < 10 && skillBonuses.morningBonusPercent > 0) {
+        earnedXp += Math.round(targetHabit.xpReward * (skillBonuses.morningBonusPercent / 100));
+      } else if (currentHour >= 20 && skillBonuses.eveningBonusPercent > 0) {
+        earnedXp += Math.round(targetHabit.xpReward * (skillBonuses.eveningBonusPercent / 100));
+      }
+
+      // Critical XP roll
+      if (Math.random() * 100 < (gearBuffs.critXpChance || 0)) {
+        isCrit = true;
+        earnedXp *= 2;
+      }
 
       nextTotalXp += earnedXp;
 
       const tx: XPTransaction = {
         id: generateId('tx'),
         amount: earnedXp,
-        reason: isPastDate
+        reason: isCrit
+          ? `⚡ CRITICAL HIT 2x XP! ${targetHabit.title}`
+          : isPastDate
           ? `Backfilled: ${targetHabit.title} (${activeDateStr})`
           : `Completed: ${targetHabit.title} ${streakBonus > 0 ? `(+${streakBonus} Streak Bonus)` : ''}`,
         timestamp: new Date().toISOString(),
@@ -266,8 +318,60 @@ export default function App() {
     setCompletions(nextCompletions);
     setXpTransactions(BuffrStorage.getXpTransactions());
 
+    // Check Mini Combo Routine Chains bonus XP
+    if (willBeCompleted) {
+      const activeChains = routineChains.filter(
+        (rc) => !rc.isArchived && rc.habitIds.includes(habitId)
+      );
+
+      for (const chain of activeChains) {
+        const otherHabitsDone = chain.habitIds
+          .filter((hid) => hid !== habitId)
+          .every((hid) =>
+            nextCompletions.some(
+              (c) => c.habitId === hid && c.dateStr === activeDateStr && c.isCompleted
+            )
+          );
+
+        // If this completing habit was the final step of the chain:
+        if (otherHabitsDone) {
+          nextTotalXp += chain.comboBonusXp;
+          const comboTx: XPTransaction = {
+            id: generateId('tx'),
+            amount: chain.comboBonusXp,
+            reason: `⚡ Mini Combo Clear: ${chain.title} (+${chain.comboBonusXp} XP Combo Multiplier)`,
+            timestamp: new Date().toISOString(),
+          };
+          BuffrStorage.saveXPTransaction(comboTx);
+          setXpTransactions(BuffrStorage.getXpTransactions());
+          playSound('powerup');
+          triggerHapticPulse('heavy');
+        }
+      }
+    }
+
     // Calculate comprehensive streak & perfect days metrics
     const streakStats = calculateOverallStreak(habits, nextCompletions);
+
+    // Check Perfect Day 100% Score
+    let isPerfectDayNow = false;
+    if (willBeCompleted) {
+      const dayStats = calculateDailyScore(habits, nextCompletions, activeDateStr);
+      if (dayStats.score === 100 && dayStats.scheduledCount > 0) {
+        isPerfectDayNow = true;
+        setIsPerfectDayModalOpen(true);
+        playCelebrationSound();
+      }
+    }
+
+    // Roll for Loot Drop if completing mission
+    let updatedInventory = user.inventory || [];
+    if (willBeCompleted) {
+      droppedLoot = rollForLootDrop(targetHabit, user, isPerfectDayNow);
+      if (droppedLoot) {
+        updatedInventory = [droppedLoot, ...updatedInventory];
+      }
+    }
 
     // Check Level Up
     const oldLevel = user.level;
@@ -284,25 +388,20 @@ export default function App() {
         levelInfo.level > oldLevel && levelInfo.titleUnlocked
           ? levelInfo.titleUnlocked
           : user.currentTitle,
+      inventory: updatedInventory,
     };
     BuffrStorage.saveUser(nextUser);
     setUser(nextUser);
 
-    // Trigger Level Up Celebration
-    if (levelInfo.level > oldLevel) {
+    // Trigger Loot Discovery or Level Up Celebration
+    if (droppedLoot) {
+      setPendingLootItem(droppedLoot);
+      setIsLootDropModalOpen(true);
+    } else if (levelInfo.level > oldLevel) {
       setLevelUpNewLevel(levelInfo.level);
       setLevelUpTitleUnlocked(levelInfo.titleUnlocked);
       setIsLevelUpModalOpen(true);
       playLevelUpSound();
-    }
-
-    // Check Perfect Day 100% Score
-    if (willBeCompleted) {
-      const dayStats = calculateDailyScore(habits, nextCompletions, activeDateStr);
-      if (dayStats.score === 100 && dayStats.scheduledCount > 0) {
-        setIsPerfectDayModalOpen(true);
-        playCelebrationSound();
-      }
     }
 
     // Check Quests & Achievements
@@ -345,7 +444,36 @@ export default function App() {
       const h = habits.find((hb) => hb.id === habitId);
       if (h) {
         const oldLevel = user.level;
-        const nextTotalXp = user.totalXp + h.xpReward;
+        let nextTotalXp = user.totalXp + h.xpReward;
+
+        // Check Mini Combo Routine Chains bonus XP
+        const activeChains = routineChains.filter(
+          (rc) => !rc.isArchived && rc.habitIds.includes(habitId)
+        );
+
+        for (const chain of activeChains) {
+          const otherHabitsDone = chain.habitIds
+            .filter((hid) => hid !== habitId)
+            .every((hid) =>
+              nextCompletions.some(
+                (c) => c.habitId === hid && c.dateStr === activeDateStr && c.isCompleted
+              )
+            );
+
+          if (otherHabitsDone) {
+            nextTotalXp += chain.comboBonusXp;
+            const comboTx: XPTransaction = {
+              id: generateId('tx'),
+              amount: chain.comboBonusXp,
+              reason: `⚡ Mini Combo Clear: ${chain.title} (+${chain.comboBonusXp} XP Combo Multiplier)`,
+              timestamp: new Date().toISOString(),
+            };
+            BuffrStorage.saveXPTransaction(comboTx);
+            playSound('powerup');
+            triggerHapticPulse('heavy');
+          }
+        }
+
         const levelInfo = calculateLevelFromTotalXp(nextTotalXp);
         const streakStats = calculateOverallStreak(habits, nextCompletions);
         const nextUser: UserProfile = {
@@ -505,6 +633,76 @@ export default function App() {
     playCompletionSound();
   };
 
+  // RPG Gear and Skill Tree Handlers
+  const handleEquipLootItem = (item: LootItem) => {
+    playSound('equip');
+    const currentInventory = user.inventory || [];
+    const currentEquipped = user.equippedGear || {};
+
+    const updatedInventory = currentInventory.map((invItem) => {
+      if (invItem.slot === item.slot && invItem.isEquipped && invItem.id !== item.id) {
+        return { ...invItem, isEquipped: false };
+      }
+      if (invItem.id === item.id) {
+        return { ...invItem, isEquipped: true };
+      }
+      return invItem;
+    });
+
+    const nextUser: UserProfile = {
+      ...user,
+      inventory: updatedInventory,
+      equippedGear: {
+        ...currentEquipped,
+        [item.slot]: { ...item, isEquipped: true },
+      },
+    };
+
+    BuffrStorage.saveUser(nextUser);
+    setUser(nextUser);
+    if (currentUser) {
+      FirestoreSyncService.saveUser(currentUser.uid, nextUser);
+    }
+  };
+
+  const handleUnequipSlot = (slot: LootSlotType) => {
+    playSound('click');
+    const currentInventory = user.inventory || [];
+    const currentEquipped = { ...(user.equippedGear || {}) };
+    delete currentEquipped[slot];
+
+    const updatedInventory = currentInventory.map((invItem) => {
+      if (invItem.slot === slot && invItem.isEquipped) {
+        return { ...invItem, isEquipped: false };
+      }
+      return invItem;
+    });
+
+    const nextUser: UserProfile = {
+      ...user,
+      inventory: updatedInventory,
+      equippedGear: currentEquipped,
+    };
+
+    BuffrStorage.saveUser(nextUser);
+    setUser(nextUser);
+    if (currentUser) {
+      FirestoreSyncService.saveUser(currentUser.uid, nextUser);
+    }
+  };
+
+  const handleUpdateSkillTree = (updatedSkillTree: UserSkillTreeState) => {
+    const nextUser: UserProfile = {
+      ...user,
+      skillTree: updatedSkillTree,
+    };
+    BuffrStorage.saveUser(nextUser);
+    setUser(nextUser);
+    if (currentUser) {
+      FirestoreSyncService.saveUser(currentUser.uid, nextUser);
+    }
+  };
+
   // Habit CRUD Actions
   const handleSaveHabit = (habitData: Partial<Habit>) => {
     let savedHabit: Habit;
@@ -615,6 +813,32 @@ export default function App() {
     setHabits(BuffrStorage.getHabits());
   };
 
+  const handleReorderHabits = (newOrderedHabits: Habit[]) => {
+    BuffrStorage.saveHabits(newOrderedHabits);
+    setHabits(newOrderedHabits);
+    if (currentUser) {
+      newOrderedHabits.forEach((h) => {
+        FirestoreSyncService.saveHabit(currentUser.uid, h);
+      });
+    }
+  };
+
+  const handleSaveRoutineChain = (chain: RoutineChain) => {
+    BuffrStorage.saveRoutineChain(chain);
+    setRoutineChains(BuffrStorage.getRoutineChains());
+    if (currentUser) {
+      FirestoreSyncService.saveRoutineChain(currentUser.uid, chain);
+    }
+  };
+
+  const handleDeleteRoutineChain = (chainId: string) => {
+    BuffrStorage.deleteRoutineChain(chainId);
+    setRoutineChains(BuffrStorage.getRoutineChains());
+    if (currentUser) {
+      FirestoreSyncService.deleteRoutineChain(currentUser.uid, chainId);
+    }
+  };
+
   const handleDeleteHabit = (habitId: string) => {
     BuffrStorage.deleteHabit(habitId);
     if (currentUser) {
@@ -663,6 +887,7 @@ export default function App() {
             habits={habits}
             completions={completions}
             quests={quests}
+            routineChains={routineChains}
             onToggleHabit={handleToggleHabit}
             onUpdateHabitProgress={handleUpdateHabitProgress}
             onOpenHabitDetail={(habit) => {
@@ -676,6 +901,10 @@ export default function App() {
               setEditingHabit(null);
               setIsHabitFormOpen(true);
             }}
+            onSaveRoutineChain={handleSaveRoutineChain}
+            onDeleteRoutineChain={handleDeleteRoutineChain}
+            onReorderHabits={handleReorderHabits}
+            onToggleArchiveHabit={handleToggleArchiveHabit}
           />
         );
       case 'calendar':
@@ -695,6 +924,10 @@ export default function App() {
             habits={habits}
             completions={completions}
             onOpenWeeklyReview={() => setIsWeeklyReviewOpen(true)}
+            onUpdateSkillTree={handleUpdateSkillTree}
+            onOpenCartridgeModal={() => setIsRetroCartridgeOpen(true)}
+            onEquipItem={handleEquipLootItem}
+            onUnequipSlot={handleUnequipSlot}
           />
         );
       case 'challenges':
@@ -726,6 +959,10 @@ export default function App() {
             onResetDemoData={handleExploreDemo}
             onResetFreshData={handleResetFresh}
             onDataImportSuccess={refreshAllState}
+            onOpenCartridgeModal={() => setIsRetroCartridgeOpen(true)}
+            onOpenSkillTree={() => setActiveTab('progress')}
+            onEquipItem={handleEquipLootItem}
+            onUnequipSlot={handleUnequipSlot}
           />
         );
       default:
@@ -751,6 +988,9 @@ export default function App() {
         }}
         isDeviceFrameEnabled={isDeviceFrameEnabled}
         onToggleDeviceFrame={() => setIsDeviceFrameEnabled(!isDeviceFrameEnabled)}
+        onOpenSkillTree={() => setActiveTab('progress')}
+        onOpenCartridge={() => setIsRetroCartridgeOpen(true)}
+        onOpenVault={() => setActiveTab('progress')}
       />
 
       {/* Main Content View with Fade Transition */}
@@ -830,6 +1070,32 @@ export default function App() {
         isOpen={isOnboardingOpen}
         onFinishOnboarding={handleFinishOnboarding}
         onExploreDemo={handleExploreDemo}
+      />
+
+      <LootDropModal
+        isOpen={isLootDropModalOpen}
+        item={pendingLootItem}
+        onClose={() => {
+          setIsLootDropModalOpen(false);
+          setPendingLootItem(null);
+        }}
+        onEquip={(item) => {
+          handleEquipLootItem(item);
+          setIsLootDropModalOpen(false);
+          setPendingLootItem(null);
+        }}
+        onSendToVault={() => {
+          setIsLootDropModalOpen(false);
+          setPendingLootItem(null);
+        }}
+      />
+
+      <RetroCartridgeModal
+        isOpen={isRetroCartridgeOpen}
+        user={user}
+        habits={habits}
+        completions={completions}
+        onClose={() => setIsRetroCartridgeOpen(false)}
       />
     </div>
   );

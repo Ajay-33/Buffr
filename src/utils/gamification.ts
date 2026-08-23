@@ -374,7 +374,8 @@ export const calculateOverallStreak = (
  */
 export const calculateLifeAttributes = (
   habits: Habit[],
-  completions: HabitCompletion[]
+  completions: HabitCompletion[],
+  user?: Partial<UserProfile> | null
 ): LifeAttributes => {
   const baseAttributes: LifeAttributes = {
     Strength: 25,
@@ -387,6 +388,29 @@ export const calculateLifeAttributes = (
     Social: 18,
     Finance: 20,
   };
+
+  // Add passive boosts from equipped gear
+  if (user?.equippedGear) {
+    const gearList = [
+      user.equippedGear.weapon,
+      user.equippedGear.armor,
+      user.equippedGear.relic,
+      user.equippedGear.charm,
+    ].filter(Boolean);
+
+    gearList.forEach((item) => {
+      if (!item) return;
+      if (item.stats.strengthBoost) baseAttributes.Strength += item.stats.strengthBoost;
+      if (item.stats.healthBoost) baseAttributes.Health += item.stats.healthBoost;
+      if (item.stats.mindBoost) baseAttributes.Mind += item.stats.mindBoost;
+      if (item.stats.focusBoost) baseAttributes.Focus += item.stats.focusBoost;
+      if (item.stats.disciplineBoost) baseAttributes.Discipline += item.stats.disciplineBoost;
+      if (item.stats.mindfulnessBoost) baseAttributes.Mindfulness += item.stats.mindfulnessBoost;
+      if (item.stats.creativityBoost) baseAttributes.Creativity += item.stats.creativityBoost;
+      if (item.stats.socialBoost) baseAttributes.Social += item.stats.socialBoost;
+      if (item.stats.financeBoost) baseAttributes.Finance += item.stats.financeBoost;
+    });
+  }
 
   const completedMap: Record<string, number> = {};
   completions.filter((c) => c.isCompleted).forEach((c) => {
