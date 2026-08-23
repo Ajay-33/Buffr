@@ -1,0 +1,10 @@
+[
+	{
+		"pkg": "@capacitor-firebase/authentication",
+		"classpath": "io.capawesome.capacitorjs.plugins.firebase.authentication.FirebaseAuthenticationPlugin"
+	},
+	{
+		"pkg": "@capacitor/local-notifications",
+		"classpath": "com.capacitorjs.plugins.localnotifications.LocalNotificationsPlugin"
+	}
+]

@@ -4,14 +4,17 @@ import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
 import android.content.Context;
+import android.view.View;
 import android.widget.RemoteViews;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 public class BuffrDailyHUDWidget extends AppWidgetProvider {
 
     public static void updateAppWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId) {
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.buffr_daily_hud_widget);
 
-        // Populate dynamic values
+        // Populate Character HUD
         String heroName = BuffrWidgetData.getHeroName(context);
         int level = BuffrWidgetData.getLevel(context);
         int currentXp = BuffrWidgetData.getCurrentXp(context);
@@ -22,7 +25,6 @@ public class BuffrDailyHUDWidget extends AppWidgetProvider {
         int questsDone = BuffrWidgetData.getQuestsDone(context);
         int questsTotal = BuffrWidgetData.getQuestsTotal(context);
         int questPercent = BuffrWidgetData.getQuestPercent(context);
-        String nextQuest = BuffrWidgetData.getNextQuestTitle(context);
 
         views.setTextViewText(R.id.tv_hero_name, heroName);
         views.setTextViewText(R.id.tv_level_badge, "LVL " + level);
@@ -33,13 +35,73 @@ public class BuffrDailyHUDWidget extends AppWidgetProvider {
         views.setTextViewText(R.id.tv_xp_percent, xpPercent + "%");
         views.setProgressBar(R.id.pb_xp_progress, 100, xpPercent, false);
 
-        views.setTextViewText(R.id.tv_quest_status, "⚔️ Quests: " + questsDone + " / " + questsTotal + " Done");
-        views.setTextViewText(R.id.tv_quest_percent, questPercent + "%");
-        views.setTextViewText(R.id.tv_next_quest, nextQuest);
+        views.setTextViewText(R.id.tv_quest_status, "⚔️ TODAY'S QUESTS");
+        views.setTextViewText(R.id.tv_quest_percent, questsDone + "/" + questsTotal + " (" + questPercent + "%)");
 
-        // Pending Intents
+        // Populate Quest Rows from Habits Array
+        JSONArray habits = BuffrWidgetData.getHabitsArray(context);
+        int questRows = 3;
+
+        int[] rowIds = { R.id.ll_quest_row_1, R.id.ll_quest_row_2, R.id.ll_quest_row_3 };
+        int[] checkBtnIds = { R.id.btn_check_1, R.id.btn_check_2, R.id.btn_check_3 };
+        int[] titleIds = { R.id.tv_quest_title_1, R.id.tv_quest_title_2, R.id.tv_quest_title_3 };
+        int[] xpIds = { R.id.tv_quest_xp_1, R.id.tv_quest_xp_2, R.id.tv_quest_xp_3 };
+
+        if (habits.length() == 0) {
+            // No habits configured yet
+            views.setViewVisibility(R.id.ll_quest_row_1, View.GONE);
+            views.setViewVisibility(R.id.ll_quest_row_2, View.GONE);
+            views.setViewVisibility(R.id.ll_quest_row_3, View.GONE);
+            views.setViewVisibility(R.id.tv_all_done_label, View.VISIBLE);
+            views.setTextViewText(R.id.tv_all_done_label, "Tap below to create your first quest!");
+        } else {
+            boolean allDone = (questsDone >= questsTotal && questsTotal > 0);
+            views.setViewVisibility(R.id.tv_all_done_label, allDone ? View.VISIBLE : View.GONE);
+            if (allDone) {
+                views.setTextViewText(R.id.tv_all_done_label, "🎉 All Daily Quests Conquered! Hero combo active.");
+            }
+
+            for (int i = 0; i < questRows; i++) {
+                if (i < habits.length()) {
+                    try {
+                        JSONObject h = habits.getJSONObject(i);
+                        String habitId = h.optString("id", "");
+                        String emoji = h.optString("emoji", "⚔️");
+                        String title = h.optString("title", "Quest");
+                        int xp = h.optInt("xp", 50);
+                        boolean isDone = h.optBoolean("isCompleted", false);
+
+                        views.setViewVisibility(rowIds[i], View.VISIBLE);
+                        views.setTextViewText(titleIds[i], emoji + " " + title);
+                        views.setTextViewText(xpIds[i], "+" + xp + " XP");
+
+                        if (isDone) {
+                            views.setTextViewText(checkBtnIds[i], "✔");
+                            views.setTextColor(checkBtnIds[i], context.getColor(R.color.widget_emerald));
+                            views.setInt(checkBtnIds[i], "setBackgroundResource", R.drawable.widget_checkbox_checked_bg);
+                            views.setTextColor(titleIds[i], context.getColor(R.color.widget_text_muted));
+                        } else {
+                            views.setTextViewText(checkBtnIds[i], "◻");
+                            views.setTextColor(checkBtnIds[i], context.getColor(R.color.widget_cyan));
+                            views.setInt(checkBtnIds[i], "setBackgroundResource", R.drawable.widget_checkbox_bg);
+                            views.setTextColor(titleIds[i], context.getColor(R.color.widget_text_primary));
+                        }
+
+                        // Attach 1-tap interactive PendingIntent directly to the checkbox
+                        PendingIntent toggleIntent = BuffrActionReceiver.createTogglePendingIntent(context, habitId, 1000 + i + (appWidgetId * 10));
+                        views.setOnClickPendingIntent(checkBtnIds[i], toggleIntent);
+
+                    } catch (Exception e) {
+                        views.setViewVisibility(rowIds[i], View.GONE);
+                    }
+                } else {
+                    views.setViewVisibility(rowIds[i], View.GONE);
+                }
+            }
+        }
+
+        // Whole widget / Open Quests Pending Intents
         PendingIntent launchIntent = BuffrWidgetData.getLaunchPendingIntent(context);
-        views.setOnClickPendingIntent(R.id.widget_root, launchIntent);
         views.setOnClickPendingIntent(R.id.btn_open_quests, launchIntent);
 
         PendingIntent refreshIntent = BuffrWidgetData.getRefreshPendingIntent(context, BuffrDailyHUDWidget.class);
@@ -57,7 +119,6 @@ public class BuffrDailyHUDWidget extends AppWidgetProvider {
 
     @Override
     public void onEnabled(Context context) {
-        // First widget created
         BuffrWidgetData.updateAllWidgets(context);
     }
 }

@@ -10,12 +10,17 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Expose native widget updater to WebView JavaScript context
+        // Expose native widget updater and pending action sync to WebView JavaScript context
         if (this.bridge != null && this.bridge.getWebView() != null) {
             this.bridge.getWebView().addJavascriptInterface(new Object() {
                 @JavascriptInterface
                 public void updateWidget(String jsonData) {
                     BuffrWidgetData.saveWidgetData(MainActivity.this, jsonData);
+                }
+
+                @JavascriptInterface
+                public String getPendingCompletions() {
+                    return BuffrWidgetData.getAndClearPendingCompletions(MainActivity.this);
                 }
             }, "BuffrNativeWidget");
         }
@@ -28,4 +33,3 @@ public class MainActivity extends BridgeActivity {
         BuffrWidgetData.updateAllWidgets(this);
     }
 }
-

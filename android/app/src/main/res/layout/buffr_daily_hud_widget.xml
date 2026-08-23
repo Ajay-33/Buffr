@@ -5,16 +5,16 @@
     android:layout_height="match_parent"
     android:background="@drawable/widget_hud_bg"
     android:orientation="vertical"
-    android:padding="12dp">
+    android:padding="10dp">
 
-    <!-- Top Header Row: Hero Profile & Stats -->
+    <!-- Top Character HUD Row -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
-        <!-- Hero Name -->
+        <!-- Hero Avatar & Name -->
         <TextView
             android:id="@+id/tv_hero_name"
             android:layout_width="0dp"
@@ -24,7 +24,7 @@
             android:maxLines="1"
             android:text="🎮 HERO"
             android:textColor="@color/widget_text_primary"
-            android:textSize="14sp"
+            android:textSize="12sp"
             android:textStyle="bold" />
 
         <!-- Level Badge -->
@@ -32,13 +32,13 @@
             android:id="@+id/tv_level_badge"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="6dp"
+            android:layout_marginStart="4dp"
             android:background="@drawable/widget_badge_cyan"
-            android:paddingHorizontal="6dp"
-            android:paddingVertical="2dp"
+            android:paddingHorizontal="5dp"
+            android:paddingVertical="1dp"
             android:text="LVL 1"
             android:textColor="@color/widget_cyan"
-            android:textSize="11sp"
+            android:textSize="10sp"
             android:textStyle="bold" />
 
         <!-- Streak Badge -->
@@ -46,75 +46,83 @@
             android:id="@+id/tv_streak_badge"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="6dp"
+            android:layout_marginStart="4dp"
             android:background="@drawable/widget_badge_gold"
-            android:paddingHorizontal="6dp"
-            android:paddingVertical="2dp"
+            android:paddingHorizontal="5dp"
+            android:paddingVertical="1dp"
             android:text="🔥 1d"
             android:textColor="@color/widget_gold"
-            android:textSize="11sp"
+            android:textSize="10sp"
             android:textStyle="bold" />
 
-        <!-- Gold Count -->
+        <!-- Gold Badge -->
         <TextView
             android:id="@+id/tv_gold_badge"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="💰 100G"
+            android:layout_marginStart="4dp"
+            android:background="@drawable/widget_card_inner"
+            android:paddingHorizontal="5dp"
+            android:paddingVertical="1dp"
+            android:text="💰 50G"
             android:textColor="@color/widget_gold"
-            android:textSize="11sp"
+            android:textSize="10sp"
             android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- XP Progress Row -->
+    <!-- XP Progress Bar Segment -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
+        android:layout_marginTop="5dp"
+        android:orientation="vertical">
 
-        <TextView
-            android:id="@+id/tv_xp_label"
-            android:layout_width="0dp"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="XP: 0 / 100"
-            android:textColor="@color/widget_text_secondary"
-            android:textSize="11sp" />
+            android:orientation="horizontal">
 
-        <TextView
-            android:id="@+id/tv_xp_percent"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="0%"
-            android:textColor="@color/widget_cyan"
-            android:textSize="11sp"
-            android:textStyle="bold" />
+            <TextView
+                android:id="@+id/tv_xp_label"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="XP: 0 / 100"
+                android:textColor="@color/widget_text_secondary"
+                android:textSize="9sp" />
+
+            <TextView
+                android:id="@+id/tv_xp_percent"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0%"
+                android:textColor="@color/widget_cyan"
+                android:textSize="9sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <ProgressBar
+            android:id="@+id/pb_xp_progress"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="5dp"
+            android:layout_marginTop="2dp"
+            android:max="100"
+            android:progress="25"
+            android:progressDrawable="@drawable/widget_progress_bar" />
     </LinearLayout>
 
-    <!-- XP Progress Bar -->
-    <ProgressBar
-        android:id="@+id/pb_xp_progress"
-        style="?android:attr/progressBarStyleHorizontal"
-        android:layout_width="match_parent"
-        android:layout_height="6dp"
-        android:layout_marginTop="3dp"
-        android:max="100"
-        android:progress="0"
-        android:progressDrawable="@drawable/widget_progress_bar" />
-
-    <!-- Quests Overview Inner Card -->
+    <!-- Interactive Quests Section -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="6dp"
         android:layout_weight="1"
         android:background="@drawable/widget_card_inner"
-        android:gravity="center_vertical"
         android:orientation="vertical"
-        android:padding="8dp">
+        android:padding="6dp">
 
+        <!-- Quests Header -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -126,38 +134,166 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="⚔️ Daily Quests: 0 / 0"
-                android:textColor="@color/widget_text_primary"
-                android:textSize="12sp"
+                android:text="⚔️ TODAY'S QUESTS"
+                android:textColor="@color/widget_cyan"
+                android:textSize="10sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/tv_quest_percent"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="0%"
-                android:textColor="@color/widget_emerald"
-                android:textSize="11sp"
+                android:text="0/0 (0%)"
+                android:textColor="@color/widget_gold"
+                android:textSize="10sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
-        <TextView
-            android:id="@+id/tv_next_quest"
+        <!-- Quest Row 1 (Interactive) -->
+        <LinearLayout
+            android:id="@+id/ll_quest_row_1"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:text="Tap to open today's quest board"
-            android:textColor="@color/widget_text_muted"
-            android:textSize="11sp" />
+            android:layout_marginTop="3dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/btn_check_1"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:background="@drawable/widget_checkbox_bg"
+                android:gravity="center"
+                android:text="◻"
+                android:textColor="@color/widget_cyan"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tv_quest_title_1"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="🏋️ Morning Workout"
+                android:textColor="@color/widget_text_primary"
+                android:textSize="10sp" />
+
+            <TextView
+                android:id="@+id/tv_quest_xp_1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:text="+50 XP"
+                android:textColor="@color/widget_gold"
+                android:textSize="9sp" />
+        </LinearLayout>
+
+        <!-- Quest Row 2 (Interactive) -->
+        <LinearLayout
+            android:id="@+id/ll_quest_row_2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/btn_check_2"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:background="@drawable/widget_checkbox_bg"
+                android:gravity="center"
+                android:text="◻"
+                android:textColor="@color/widget_cyan"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tv_quest_title_2"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="📚 Read 20 Pages"
+                android:textColor="@color/widget_text_primary"
+                android:textSize="10sp" />
+
+            <TextView
+                android:id="@+id/tv_quest_xp_2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:text="+40 XP"
+                android:textColor="@color/widget_gold"
+                android:textSize="9sp" />
+        </LinearLayout>
+
+        <!-- Quest Row 3 (Interactive) -->
+        <LinearLayout
+            android:id="@+id/ll_quest_row_3"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/btn_check_3"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:background="@drawable/widget_checkbox_bg"
+                android:gravity="center"
+                android:text="◻"
+                android:textColor="@color/widget_cyan"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tv_quest_title_3"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="💧 Drink 2L Water"
+                android:textColor="@color/widget_text_primary"
+                android:textSize="10sp" />
+
+            <TextView
+                android:id="@+id/tv_quest_xp_3"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:text="+30 XP"
+                android:textColor="@color/widget_gold"
+                android:textSize="9sp" />
+        </LinearLayout>
+
+        <!-- All Done / Empty State Label -->
+        <TextView
+            android:id="@+id/tv_all_done_label"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:gravity="center"
+            android:text="🎉 All Daily Quests Conquered!"
+            android:textColor="@color/widget_gold"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
     </LinearLayout>
 
-    <!-- Action Launch Footer -->
+    <!-- Action Launch & Sync Footer -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="6dp"
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
@@ -168,23 +304,23 @@
             android:layout_weight="1"
             android:background="@drawable/widget_btn_action"
             android:gravity="center"
-            android:paddingVertical="6dp"
-            android:text="⚔️ OPEN QUEST HUD"
+            android:paddingVertical="5dp"
+            android:text="⚔️ OPEN BUFFR HUD"
             android:textColor="@color/widget_bg"
-            android:textSize="11sp"
+            android:textSize="10sp"
             android:textStyle="bold" />
 
         <TextView
             android:id="@+id/btn_refresh"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
+            android:layout_marginStart="6dp"
             android:background="@drawable/widget_card_inner"
             android:gravity="center"
-            android:paddingHorizontal="10dp"
-            android:paddingVertical="6dp"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="5dp"
             android:text="🔄"
             android:textColor="@color/widget_text_secondary"
-            android:textSize="12sp" />
+            android:textSize="11sp" />
     </LinearLayout>
 </LinearLayout>

@@ -4,6 +4,11 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
 
     <application
         android:allowBackup="true"
@@ -37,6 +42,15 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- Buffr Action Broadcast Receiver (Widget & Notification Checkoffs) -->
+        <receiver
+            android:name=".BuffrActionReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.example.buffr.ACTION_TOGGLE_HABIT" />
+            </intent-filter>
+        </receiver>
 
         <!-- Buffr Daily HUD Widget Receiver (4x2 / 4x1) -->
         <receiver

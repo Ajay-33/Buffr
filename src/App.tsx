@@ -48,6 +48,7 @@ import {
 } from './utils/gamification';
 import { getTodayStr } from './utils/dateUtils';
 import { BuffrWidgetBridge } from './utils/widgetBridge';
+import { BuffrNotificationService } from './utils/notifications';
 import {
   playCompletionSound,
   playStreakSound,
@@ -67,6 +68,7 @@ export default function App() {
 
   // App state
   const [activeTab, setActiveTab] = useState<'today' | 'calendar' | 'progress' | 'challenges' | 'profile'>('today');
+  const [progressSubTab, setProgressSubTab] = useState<'stats' | 'skills' | 'vault'>('stats');
   const [isDeviceFrameEnabled, setIsDeviceFrameEnabled] = useState(false);
 
   // Core Data
@@ -85,7 +87,51 @@ export default function App() {
   const [isLootDropModalOpen, setIsLootDropModalOpen] = useState(false);
   const [isRetroCartridgeOpen, setIsRetroCartridgeOpen] = useState(false);
 
-  // Sync with Android Home Screen Widget whenever relevant state changes
+  // Sync with Android Home Screen Widget and Notification Service on app load & attach action listeners
+  useEffect(() => {
+    // 1. Initial Widget & Notification Sync
+    BuffrWidgetBridge.sync();
+    BuffrNotificationService.initChannels().then(() => {
+      BuffrNotificationService.rescheduleAll();
+    });
+
+    // 2. Setup Interactive Notification Actions (Mark Done & Snooze)
+    BuffrNotificationService.setupActionListeners((habitId) => {
+      handleToggleHabit(habitId);
+    });
+
+    // 3. Consume any pending completions checked off from Home Screen Widgets
+    BuffrWidgetBridge.consumePendingWidgetActions((habitId) => {
+      handleToggleHabit(habitId);
+    });
+
+    // 4. Poll/Listen on App Resume / Visibility Change
+    const handleAppResume = () => {
+      if (document.visibilityState === 'visible') {
+        BuffrWidgetBridge.consumePendingWidgetActions((habitId) => {
+          handleToggleHabit(habitId);
+        });
+        BuffrWidgetBridge.sync();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleAppResume);
+    window.addEventListener('focus', handleAppResume);
+
+    const interval = setInterval(() => {
+      BuffrWidgetBridge.consumePendingWidgetActions((habitId) => {
+        handleToggleHabit(habitId);
+      });
+    }, 2500);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleAppResume);
+      window.removeEventListener('focus', handleAppResume);
+      clearInterval(interval);
+    };
+  }, []);
+
+  // Synchronize Home Screen Widget whenever user progress, habits, or completions update
   useEffect(() => {
     BuffrWidgetBridge.sync();
   }, [user, habits, completions]);
@@ -929,6 +975,8 @@ export default function App() {
             user={user}
             habits={habits}
             completions={completions}
+            activeSubTab={progressSubTab}
+            onSubTabChange={setProgressSubTab}
             onOpenWeeklyReview={() => setIsWeeklyReviewOpen(true)}
             onUpdateSkillTree={handleUpdateSkillTree}
             onOpenCartridgeModal={() => setIsRetroCartridgeOpen(true)}
@@ -966,7 +1014,14 @@ export default function App() {
             onResetFreshData={handleResetFresh}
             onDataImportSuccess={refreshAllState}
             onOpenCartridgeModal={() => setIsRetroCartridgeOpen(true)}
-            onOpenSkillTree={() => setActiveTab('progress')}
+            onOpenSkillTree={() => {
+              setProgressSubTab('skills');
+              setActiveTab('progress');
+            }}
+            onOpenVault={() => {
+              setProgressSubTab('vault');
+              setActiveTab('progress');
+            }}
             onEquipItem={handleEquipLootItem}
             onUnequipSlot={handleUnequipSlot}
           />
@@ -994,9 +1049,15 @@ export default function App() {
         }}
         isDeviceFrameEnabled={isDeviceFrameEnabled}
         onToggleDeviceFrame={() => setIsDeviceFrameEnabled(!isDeviceFrameEnabled)}
-        onOpenSkillTree={() => setActiveTab('progress')}
+        onOpenSkillTree={() => {
+          setProgressSubTab('skills');
+          setActiveTab('progress');
+        }}
         onOpenCartridge={() => setIsRetroCartridgeOpen(true)}
-        onOpenVault={() => setActiveTab('progress')}
+        onOpenVault={() => {
+          setProgressSubTab('vault');
+          setActiveTab('progress');
+        }}
       />
 
       {/* Main Content View with Fade Transition */}

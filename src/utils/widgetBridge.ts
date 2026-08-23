@@ -1,6 +1,14 @@
 import { BuffrStorage } from '../storage/db';
 import { calculateLevelFromTotalXp } from './gamification';
 
+export interface WidgetHabitItem {
+  id: string;
+  title: string;
+  emoji: string;
+  xp: number;
+  isCompleted: boolean;
+}
+
 export interface WidgetPayload {
   heroName: string;
   level: number;
@@ -14,6 +22,7 @@ export interface WidgetPayload {
   questsTotal: number;
   questPercent: number;
   nextQuestTitle: string;
+  habits: WidgetHabitItem[];
 }
 
 export class BuffrWidgetBridge {
@@ -27,21 +36,29 @@ export class BuffrWidgetBridge {
 
       const todayStr = new Date().toISOString().split('T')[0];
       const todayCompletions = completions.filter((c) => c.dateStr === todayStr && c.isCompleted);
+      const completedHabitIds = new Set(todayCompletions.map((c) => c.habitId));
 
       const questsTotal = habits.length;
       const questsDone = todayCompletions.length;
       const questPercent = questsTotal > 0 ? Math.round((questsDone / questsTotal) * 100) : 0;
 
       // Find first uncompleted habit
-      const completedHabitIds = new Set(todayCompletions.map((c) => c.habitId));
       const nextHabit = habits.find((h) => !completedHabitIds.has(h.id));
       const nextQuestTitle = nextHabit
         ? `${nextHabit.emoji || '⚔️'} ${nextHabit.title}`
         : questsTotal > 0 && questsDone >= questsTotal
         ? '🎉 All Quests Completed Today!'
-        : 'Tap to review today\'s quests';
+        : "Tap to review today's quests";
 
       const levelData = calculateLevelFromTotalXp(user.totalXp || 0);
+
+      const widgetHabits: WidgetHabitItem[] = habits.map((h) => ({
+        id: h.id,
+        title: h.title,
+        emoji: h.emoji || '⚔️',
+        xp: h.xpReward || 50,
+        isCompleted: completedHabitIds.has(h.id),
+      }));
 
       const payload: WidgetPayload = {
         heroName: `${user.avatarEmoji || '🎮'} ${user.name || 'Hero'}`,
@@ -56,6 +73,7 @@ export class BuffrWidgetBridge {
         questsTotal,
         questPercent,
         nextQuestTitle,
+        habits: widgetHabits,
       };
 
       // 1. Call native Android JavascriptInterface if running in Android app
@@ -68,6 +86,32 @@ export class BuffrWidgetBridge {
       localStorage.setItem('buffr_last_widget_payload', JSON.stringify(payload));
     } catch (err) {
       console.warn('Widget sync error:', err);
+    }
+  }
+
+  /**
+   * Consumes any pending completions triggered from native home screen widgets
+   */
+  public static consumePendingWidgetActions(
+    onToggleAction: (habitId: string, isCompleted: boolean) => void
+  ): void {
+    if (typeof window === 'undefined') return;
+
+    try {
+      const nativeWidget = (window as any).BuffrNativeWidget;
+      if (nativeWidget && typeof nativeWidget.getPendingCompletions === 'function') {
+        const rawJson = nativeWidget.getPendingCompletions();
+        if (rawJson && rawJson !== '[]') {
+          const pendingList: Array<{ habitId: string; isCompleted: boolean }> = JSON.parse(rawJson);
+          for (const item of pendingList) {
+            if (item.habitId) {
+              onToggleAction(item.habitId, item.isCompleted);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Error consuming pending widget actions:', err);
     }
   }
 }

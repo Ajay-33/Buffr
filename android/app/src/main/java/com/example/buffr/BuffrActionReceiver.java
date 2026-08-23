@@ -1,0 +1,130 @@
+package com.example.buffr;
+
+import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.widget.Toast;
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+public class BuffrActionReceiver extends BroadcastReceiver {
+
+    public static final String ACTION_TOGGLE_HABIT = "com.example.buffr.ACTION_TOGGLE_HABIT";
+    public static final String EXTRA_HABIT_ID = "extra_habit_id";
+    public static final String EXTRA_HABIT_TITLE = "extra_habit_title";
+    public static final String EXTRA_HABIT_XP = "extra_habit_xp";
+
+    @Override
+    public void onReceive(Context context, Intent intent) {
+        if (context == null || intent == null) return;
+
+        String action = intent.getAction();
+        if (ACTION_TOGGLE_HABIT.equals(action)) {
+            String habitId = intent.getStringExtra(EXTRA_HABIT_ID);
+            if (habitId == null || habitId.isEmpty()) return;
+
+            toggleHabitFromWidget(context, habitId);
+        }
+    }
+
+    private void toggleHabitFromWidget(Context context, String habitId) {
+        try {
+            SharedPreferences prefs = BuffrWidgetData.getPrefs(context);
+            String habitsJsonStr = prefs.getString("habits_json", "[]");
+            JSONArray habitsArray = new JSONArray(habitsJsonStr);
+
+            boolean found = false;
+            boolean newCompletedState = true;
+            String habitTitle = "Quest";
+            int habitXp = 50;
+
+            for (int i = 0; i < habitsArray.length(); i++) {
+                JSONObject habitObj = habitsArray.getJSONObject(i);
+                if (habitId.equals(habitObj.optString("id"))) {
+                    boolean currentDone = habitObj.optBoolean("isCompleted", false);
+                    newCompletedState = !currentDone;
+                    habitObj.put("isCompleted", newCompletedState);
+                    habitTitle = habitObj.optString("title", "Quest");
+                    habitXp = habitObj.optInt("xp", 50);
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found) return;
+
+            // Recalculate Quests Done & Total
+            int total = habitsArray.length();
+            int done = 0;
+            for (int i = 0; i < habitsArray.length(); i++) {
+                if (habitsArray.getJSONObject(i).optBoolean("isCompleted", false)) {
+                    done++;
+                }
+            }
+            int percent = total > 0 ? Math.round(((float) done / total) * 100) : 0;
+
+            // Adjust XP & Gold
+            int currentXp = prefs.getInt("current_xp", 0);
+            int nextLevelXp = prefs.getInt("next_level_xp", 100);
+            int gold = prefs.getInt("gold", 50);
+
+            if (newCompletedState) {
+                currentXp += habitXp;
+                gold += Math.max(1, habitXp / 2);
+            } else {
+                currentXp = Math.max(0, currentXp - habitXp);
+                gold = Math.max(0, gold - Math.max(1, habitXp / 2));
+            }
+
+            int xpPercent = nextLevelXp > 0 ? Math.min(100, Math.round(((float) currentXp / nextLevelXp) * 100)) : 0;
+
+            // Save updated state in SharedPreferences
+            SharedPreferences.Editor editor = prefs.edit();
+            editor.putString("habits_json", habitsArray.toString());
+            editor.putInt("quests_done", done);
+            editor.putInt("quests_total", total);
+            editor.putInt("quest_percent", percent);
+            editor.putInt("current_xp", currentXp);
+            editor.putInt("xp_percent", xpPercent);
+            editor.putInt("gold", gold);
+
+            // Record in pending completions queue for Web DB synchronization
+            String pendingStr = prefs.getString("pending_completions", "[]");
+            JSONArray pendingArray = new JSONArray(pendingStr);
+            JSONObject pendingAction = new JSONObject();
+            pendingAction.put("habitId", habitId);
+            pendingAction.put("isCompleted", newCompletedState);
+            pendingAction.put("timestamp", System.currentTimeMillis());
+            pendingArray.put(pendingAction);
+            editor.putString("pending_completions", pendingArray.toString());
+
+            editor.apply();
+
+            // Refresh all widgets immediately
+            BuffrWidgetData.updateAllWidgets(context);
+
+            // Toast feedback
+            String feedback = newCompletedState
+                ? "⚔️ Quest Complete: " + habitTitle + "! (+" + habitXp + " XP)"
+                : "↩️ Quest Unchecked: " + habitTitle;
+            Toast.makeText(context, feedback, Toast.LENGTH_SHORT).show();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static PendingIntent createTogglePendingIntent(Context context, String habitId, int requestCode) {
+        Intent intent = new Intent(context, BuffrActionReceiver.class);
+        intent.setAction(ACTION_TOGGLE_HABIT);
+        intent.putExtra(EXTRA_HABIT_ID, habitId);
+        return PendingIntent.getBroadcast(
+            context,
+            requestCode,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+    }
+}

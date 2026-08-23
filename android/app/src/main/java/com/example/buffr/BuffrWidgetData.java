@@ -6,7 +6,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.widget.RemoteViews;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class BuffrWidgetData {
@@ -23,6 +23,8 @@ public class BuffrWidgetData {
     private static final String KEY_QUESTS_TOTAL = "quests_total";
     private static final String KEY_QUEST_PERCENT = "quest_percent";
     private static final String KEY_NEXT_QUEST_TITLE = "next_quest_title";
+    private static final String KEY_HABITS_JSON = "habits_json";
+    private static final String KEY_PENDING_COMPLETIONS = "pending_completions";
 
     public static void saveWidgetData(Context context, String jsonString) {
         if (context == null || jsonString == null || jsonString.isEmpty()) return;
@@ -44,6 +46,7 @@ public class BuffrWidgetData {
             if (obj.has("questsTotal")) editor.putInt(KEY_QUESTS_TOTAL, obj.getInt("questsTotal"));
             if (obj.has("questPercent")) editor.putInt(KEY_QUEST_PERCENT, obj.getInt("questPercent"));
             if (obj.has("nextQuestTitle")) editor.putString(KEY_NEXT_QUEST_TITLE, obj.getString("nextQuestTitle"));
+            if (obj.has("habits")) editor.putString(KEY_HABITS_JSON, obj.getJSONArray("habits").toString());
 
             editor.apply();
 
@@ -123,6 +126,22 @@ public class BuffrWidgetData {
 
     public static String getNextQuestTitle(Context context) {
         return getPrefs(context).getString(KEY_NEXT_QUEST_TITLE, "Tap to review today's quest list");
+    }
+
+    public static JSONArray getHabitsArray(Context context) {
+        try {
+            String json = getPrefs(context).getString(KEY_HABITS_JSON, "[]");
+            return new JSONArray(json);
+        } catch (Exception e) {
+            return new JSONArray();
+        }
+    }
+
+    public static String getAndClearPendingCompletions(Context context) {
+        SharedPreferences prefs = getPrefs(context);
+        String pending = prefs.getString(KEY_PENDING_COMPLETIONS, "[]");
+        prefs.edit().putString(KEY_PENDING_COMPLETIONS, "[]").apply();
+        return pending;
     }
 
     public static PendingIntent getLaunchPendingIntent(Context context) {

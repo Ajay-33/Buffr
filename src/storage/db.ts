@@ -11,6 +11,7 @@ import {
 } from '../types';
 import { createDemoDataset, createFreshDataset, DEFAULT_ROUTINE_CHAINS } from '../data/initialData';
 import { BuffrWidgetBridge } from '../utils/widgetBridge';
+import { BuffrNotificationService } from '../utils/notifications';
 
 const DB_KEYS = {
   USER: 'buffr_user_profile',
@@ -119,6 +120,7 @@ export class BuffrStorage {
     if (!this.isBrowser()) return;
     localStorage.setItem(DB_KEYS.USER, JSON.stringify(user));
     BuffrWidgetBridge.sync();
+    BuffrNotificationService.rescheduleAll(user);
   }
 
   // Habits
@@ -139,6 +141,7 @@ export class BuffrStorage {
     if (!this.isBrowser()) return;
     localStorage.setItem(DB_KEYS.HABITS, JSON.stringify(habits));
     BuffrWidgetBridge.sync();
+    BuffrNotificationService.rescheduleAll(undefined, habits);
   }
 
   public static saveHabit(habit: Habit): void {

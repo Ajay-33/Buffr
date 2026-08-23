@@ -33,6 +33,11 @@ import {
   Zap,
   Camera,
   LayoutGrid,
+  Bell,
+  BellRing,
+  BellOff,
+  Clock,
+  Send,
 } from 'lucide-react';
 import { Habit, UserProfile, XPTransaction, LootItem, LootSlotType } from '../../types';
 import {
@@ -42,10 +47,12 @@ import {
   isStreakShieldActive,
   getHighestUnlockedTitle,
 } from '../../utils/gamification';
+import { calculateTotalSkillPoints } from '../../data/skillTreeData';
 import { exportDataAsJson, exportCompletionsAsCsv, importDataFromJson } from '../../storage/db';
 import { playSound } from '../../utils/sound';
 import { useAuth } from '../../firebase/AuthContext';
 import { AvatarPickerModal } from '../modals/AvatarPickerModal';
+import { BuffrNotificationService } from '../../utils/notifications';
 
 
 interface ProfileViewProps {
@@ -62,6 +69,7 @@ interface ProfileViewProps {
   onDataImportSuccess: () => void;
   onOpenCartridgeModal?: () => void;
   onOpenSkillTree?: () => void;
+  onOpenVault?: () => void;
   onEquipItem?: (item: LootItem) => void;
   onUnequipSlot?: (slot: LootSlotType) => void;
 }
@@ -80,6 +88,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onDataImportSuccess,
   onOpenCartridgeModal,
   onOpenSkillTree,
+  onOpenVault,
   onEquipItem,
   onUnequipSlot,
 }) => {
@@ -101,6 +110,48 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   } | null>(null);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [notificationGranted, setNotificationGranted] = useState<boolean | null>(null);
+  const [isTestingNotification, setIsTestingNotification] = useState(false);
+
+  React.useEffect(() => {
+    BuffrNotificationService.checkPermission().then((status) => {
+      setNotificationGranted(status.isGranted);
+    });
+  }, []);
+
+  const handleToggleNotifications = async () => {
+    playSound('click');
+    const newState = user.notificationsEnabled === false ? true : false;
+    if (newState) {
+      const granted = await BuffrNotificationService.requestPermission();
+      setNotificationGranted(granted);
+      if (granted) {
+        onUpdateUser({ notificationsEnabled: true });
+        BuffrNotificationService.rescheduleAll({ ...user, notificationsEnabled: true }, habits);
+        showToast('🔔 NOTIFICATIONS & BACKGROUND ALERTS ACTIVATED!');
+      } else {
+        onUpdateUser({ notificationsEnabled: false });
+        showToast('⚠️ NOTIFICATION PERMISSION WAS NOT GRANTED.');
+      }
+    } else {
+      onUpdateUser({ notificationsEnabled: false });
+      BuffrNotificationService.cancelAll();
+      showToast('🔕 NOTIFICATIONS MUTED.');
+    }
+  };
+
+  const handleSendTestNotification = async () => {
+    playSound('powerup');
+    setIsTestingNotification(true);
+    const success = await BuffrNotificationService.sendTestNotification();
+    setIsTestingNotification(false);
+    if (success) {
+      setNotificationGranted(true);
+      showToast('🚀 TEST NOTIFICATION DISPATCHED TO OS!');
+    } else {
+      showToast('⚠️ FAILED TO SEND. CHECK DEVICE PERMISSION SETTINGS.');
+    }
+  };
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -407,6 +458,61 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </div>
       </div>
 
+      {/* Hero Progression Matrix & Loadout Hub */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {/* Skill Tree Matrix Card */}
+        {onOpenSkillTree && (
+          <div
+            onClick={() => {
+              playSound('powerup');
+              onOpenSkillTree();
+            }}
+            className="p-3.5 bg-[#120a28] hover:bg-[#1a0f38] border-2 border-purple-500/80 hover:border-purple-400 shadow-[3px_3px_0px_#05020a] cursor-pointer transition-all group"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2.5">
+                <div className="p-2 bg-purple-950/80 border border-purple-400 text-purple-300 group-hover:scale-105 transition-transform">
+                  <Zap className="w-5 h-5 text-yellow-300 fill-yellow-300" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-arcade text-purple-200">SKILL TREE MATRIX</h3>
+                  <p className="text-[10px] text-cyan-300 font-retro">TALENT BUFFS & RPG PASSIVES</p>
+                </div>
+              </div>
+              <span className="px-2 py-1 bg-purple-500/30 text-yellow-300 border border-purple-400 text-[9px] font-arcade">
+                {Math.max(0, calculateTotalSkillPoints(user) - (user.skillTree?.unlockedNodeIds?.length || 0))} SP
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Hero Armory & Vault Card */}
+        {onOpenVault && (
+          <div
+            onClick={() => {
+              playSound('powerup');
+              onOpenVault();
+            }}
+            className="p-3.5 bg-[#0a1526] hover:bg-[#0f1d35] border-2 border-cyan-500/80 hover:border-cyan-400 shadow-[3px_3px_0px_#05020a] cursor-pointer transition-all group"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2.5">
+                <div className="p-2 bg-cyan-950/80 border border-cyan-400 text-cyan-300 group-hover:scale-105 transition-transform">
+                  <Shield className="w-5 h-5 text-cyan-300" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-arcade text-cyan-200">HERO ARMORY & VAULT</h3>
+                  <p className="text-[10px] text-cyan-300 font-retro">WEAPONS, ARMOR & LOOT DROPS</p>
+                </div>
+              </div>
+              <span className="px-2 py-1 bg-cyan-500/30 text-cyan-200 border border-cyan-400 text-[9px] font-arcade">
+                {user.inventory?.length || 0} ITEMS
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Habit Inventory & Management */}
       <div className="p-3.5 sm:p-5 bg-[#11092a] border-2 border-[#3b2d60] shadow-[3px_3px_0px_#05020a] space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -618,6 +724,157 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Dynamic Push Notifications & Quest Reminders */}
+      <div className="p-3.5 sm:p-5 bg-[#11092a] border-2 border-[#3b2d60] shadow-[3px_3px_0px_#05020a] space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <BellRing className="w-4 h-4 text-yellow-400 animate-pulse" />
+            <h2 className="text-xs sm:text-sm font-arcade text-yellow-400">NOTIFICATIONS & QUEST ALARMS</h2>
+          </div>
+          {notificationGranted === true ? (
+            <span className="px-2 py-0.5 text-[8px] font-arcade bg-emerald-500/20 text-emerald-300 border border-emerald-500">
+              SYSTEM PERMITTED
+            </span>
+          ) : notificationGranted === false ? (
+            <span className="px-2 py-0.5 text-[8px] font-arcade bg-rose-500/20 text-rose-300 border border-rose-500">
+              PERMISSION NEEDED
+            </span>
+          ) : null}
+        </div>
+
+        <p className="text-xs text-slate-300 font-retro">
+          Keep your hero disciplined! Scheduled push notifications alert you to morning quest logs, active routine habits, and evening streak protection alerts.
+        </p>
+
+        {/* Master Notification Toggle */}
+        <div
+          onClick={handleToggleNotifications}
+          className="p-3 bg-[#0e0722] border-2 border-[#3b2d60] flex items-center justify-between cursor-pointer hover:border-yellow-400 transition-colors"
+        >
+          <div className="flex items-center space-x-2.5">
+            {user.notificationsEnabled !== false ? (
+              <Bell className="w-5 h-5 text-yellow-400" />
+            ) : (
+              <BellOff className="w-5 h-5 text-slate-500" />
+            )}
+            <div>
+              <span className="text-[10px] font-arcade text-white block">MASTER NOTIFICATION ENGINE</span>
+              <span className="text-xs text-cyan-300 font-retro">
+                {user.notificationsEnabled !== false ? 'Scheduled alerts enabled' : 'All alerts muted'}
+              </span>
+            </div>
+          </div>
+          <div
+            className={`w-8 h-4 p-0.5 border border-black ${
+              user.notificationsEnabled !== false ? 'bg-green-400' : 'bg-slate-800'
+            }`}
+          >
+            <div
+              className={`w-3 h-3 bg-black transition-transform ${
+                user.notificationsEnabled !== false ? 'translate-x-3.5' : 'translate-x-0'
+              }`}
+            />
+          </div>
+        </div>
+
+        {user.notificationsEnabled !== false && (
+          <div className="space-y-2 pt-1">
+            {/* Morning Briefing Row */}
+            <div className="p-2.5 bg-[#090416] border border-[#2f2352] flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <span className="text-base">🌅</span>
+                <div>
+                  <span className="text-[10px] font-arcade text-white block">MORNING QUEST BRIEFING</span>
+                  <span className="text-[11px] text-cyan-300 font-retro">Daily summary of all ready quests</span>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <input
+                  type="time"
+                  value={user.morningReminderTime || '08:00'}
+                  onChange={(e) => {
+                    const time = e.target.value;
+                    onUpdateUser({ morningReminderTime: time });
+                    BuffrNotificationService.rescheduleAll({ ...user, morningReminderTime: time }, habits);
+                  }}
+                  className="bg-[#11092a] border border-[#3b2d60] px-2 py-0.5 text-[10px] font-arcade text-yellow-300 focus:outline-none"
+                />
+                <button
+                  onClick={() => {
+                    playSound('click');
+                    const enabled = user.morningReminderEnabled === false ? true : false;
+                    onUpdateUser({ morningReminderEnabled: enabled });
+                    BuffrNotificationService.rescheduleAll({ ...user, morningReminderEnabled: enabled }, habits);
+                  }}
+                  className={`px-2 py-1 text-[8px] font-arcade border ${
+                    user.morningReminderEnabled !== false
+                      ? 'bg-green-500/20 text-green-300 border-green-500'
+                      : 'bg-slate-800 text-slate-400 border-slate-700'
+                  }`}
+                >
+                  {user.morningReminderEnabled !== false ? 'ON' : 'OFF'}
+                </button>
+              </div>
+            </div>
+
+            {/* Evening Streak Shield Alert Row */}
+            <div className="p-2.5 bg-[#090416] border border-[#2f2352] flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <span className="text-base">🔥</span>
+                <div>
+                  <span className="text-[10px] font-arcade text-white block">STREAK SHIELD ALARM</span>
+                  <span className="text-[11px] text-cyan-300 font-retro">Warning if habits are unfinished</span>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <input
+                  type="time"
+                  value={user.eveningReminderTime || '21:00'}
+                  onChange={(e) => {
+                    const time = e.target.value;
+                    onUpdateUser({ eveningReminderTime: time });
+                    BuffrNotificationService.rescheduleAll({ ...user, eveningReminderTime: time }, habits);
+                  }}
+                  className="bg-[#11092a] border border-[#3b2d60] px-2 py-0.5 text-[10px] font-arcade text-yellow-300 focus:outline-none"
+                />
+                <button
+                  onClick={() => {
+                    playSound('click');
+                    const enabled = user.eveningReminderEnabled === false ? true : false;
+                    onUpdateUser({ eveningReminderEnabled: enabled });
+                    BuffrNotificationService.rescheduleAll({ ...user, eveningReminderEnabled: enabled }, habits);
+                  }}
+                  className={`px-2 py-1 text-[8px] font-arcade border ${
+                    user.eveningReminderEnabled !== false
+                      ? 'bg-green-500/20 text-green-300 border-green-500'
+                      : 'bg-slate-800 text-slate-400 border-slate-700'
+                  }`}
+                >
+                  {user.eveningReminderEnabled !== false ? 'ON' : 'OFF'}
+                </button>
+              </div>
+            </div>
+
+            {/* Test Trigger Button */}
+            <div className="pt-1 flex items-center justify-between">
+              <span className="text-[10px] font-retro text-slate-400">
+                Active Habit Reminders: {habits.filter((h) => !!h.reminderTime && !h.isPaused).length} scheduled
+              </span>
+              <button
+                onClick={handleSendTestNotification}
+                disabled={isTestingNotification}
+                className="arcade-btn-cyan px-3 py-1.5 text-[9px] font-arcade flex items-center space-x-1.5"
+              >
+                <Send className="w-3 h-3" />
+                <span>{isTestingNotification ? 'TRANSMITTING...' : 'TEST NOTIFICATION'}</span>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Google Cloud Account & Realtime Database Sync */}

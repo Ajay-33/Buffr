@@ -37,6 +37,8 @@ interface ProgressViewProps {
   user: UserProfile;
   habits: Habit[];
   completions: HabitCompletion[];
+  activeSubTab?: 'stats' | 'skills' | 'vault';
+  onSubTabChange?: (tab: 'stats' | 'skills' | 'vault') => void;
   onOpenWeeklyReview: () => void;
   onUpdateSkillTree?: (updated: UserSkillTreeState) => void;
   onOpenCartridgeModal?: () => void;
@@ -48,13 +50,22 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
   user,
   habits,
   completions,
+  activeSubTab: controlledSubTab,
+  onSubTabChange,
   onOpenWeeklyReview,
   onUpdateSkillTree,
   onOpenCartridgeModal,
   onEquipItem,
   onUnequipSlot,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'stats' | 'skills' | 'vault'>('stats');
+  const [internalSubTab, setInternalSubTab] = useState<'stats' | 'skills' | 'vault'>('stats');
+  const activeSubTab = controlledSubTab || internalSubTab;
+
+  const handleSubTabChange = (tab: 'stats' | 'skills' | 'vault') => {
+    playSound('click');
+    setInternalSubTab(tab);
+    if (onSubTabChange) onSubTabChange(tab);
+  };
   const [periodDays, setPeriodDays] = useState<7 | 30 | 90 | 365>(30);
   const attributes = calculateLifeAttributes(habits, completions, user);
   const insights = generateInsights(habits, completions);
@@ -117,11 +128,8 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
         <div className="flex items-center space-x-1 sm:space-x-2">
           <button
             id="tab-progress-stats"
-            onClick={() => {
-              playSound('click');
-              setActiveSubTab('stats');
-            }}
-            className={`px-3 py-1.5 font-arcade text-[9px] sm:text-xs flex items-center space-x-1.5 transition-all ${
+            onClick={() => handleSubTabChange('stats')}
+            className={`px-3 py-1.5 font-arcade text-[9px] sm:text-xs flex items-center space-x-1.5 transition-all cursor-pointer ${
               activeSubTab === 'stats'
                 ? 'bg-yellow-400 text-black font-bold shadow-[2px_2px_0px_#000]'
                 : 'text-slate-400 hover:text-white bg-[#120a28] border border-slate-700'
@@ -133,34 +141,28 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
 
           <button
             id="tab-progress-skills"
-            onClick={() => {
-              playSound('click');
-              setActiveSubTab('skills');
-            }}
-            className={`px-3 py-1.5 font-arcade text-[9px] sm:text-xs flex items-center space-x-1.5 transition-all ${
+            onClick={() => handleSubTabChange('skills')}
+            className={`px-3 py-1.5 font-arcade text-[9px] sm:text-xs flex items-center space-x-1.5 transition-all cursor-pointer ${
               activeSubTab === 'skills'
                 ? 'bg-purple-500 text-white font-bold shadow-[2px_2px_0px_#000]'
                 : 'text-slate-400 hover:text-white bg-[#120a28] border border-slate-700'
             }`}
           >
             <Zap className="w-3.5 h-3.5 text-yellow-300 fill-yellow-300" />
-            <span>SKILL TREE ({availableSP} SP)</span>
+            <span>SKILLS ({availableSP} SP)</span>
           </button>
 
           <button
             id="tab-progress-vault"
-            onClick={() => {
-              playSound('click');
-              setActiveSubTab('vault');
-            }}
-            className={`px-3 py-1.5 font-arcade text-[9px] sm:text-xs flex items-center space-x-1.5 transition-all ${
+            onClick={() => handleSubTabChange('vault')}
+            className={`px-3 py-1.5 font-arcade text-[9px] sm:text-xs flex items-center space-x-1.5 transition-all cursor-pointer ${
               activeSubTab === 'vault'
                 ? 'bg-cyan-500 text-black font-bold shadow-[2px_2px_0px_#000]'
                 : 'text-slate-400 hover:text-white bg-[#120a28] border border-slate-700'
             }`}
           >
             <Shield className="w-3.5 h-3.5" />
-            <span>ARMORY & VAULT</span>
+            <span>VAULT ({user.inventory?.length || 0})</span>
           </button>
         </div>
 

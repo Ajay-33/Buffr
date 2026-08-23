@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Dark Arcade Widget Outer Shell -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#090416" />
+            <stroke
+                android:width="2dp"
+                android:color="#06B6D4" />
+            <corners android:radius="14dp" />
+        </shape>
+    </item>
+
+    <!-- Top Neon Accent Line -->
+    <item
+        android:top="2dp"
+        android:left="14dp"
+        android:right="14dp"
+        android:height="3dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#FACC15" />
+        </shape>
+    </item>
+
+    <!-- Inner Card Preview Simulation -->
+    <item
+        android:top="16dp"
+        android:bottom="14dp"
+        android:left="12dp"
+        android:right="12dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#150B2B" />
+            <stroke
+                android:width="1dp"
+                android:color="#2E185B" />
+            <corners android:radius="8dp" />
+        </shape>
+    </item>
+</layer-list>

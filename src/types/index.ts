@@ -126,6 +126,13 @@ export interface UserProfile {
   joinedDate?: string;
   soundEnabled: boolean;
   hapticsEnabled: boolean;
+  notificationsEnabled?: boolean;
+  morningReminderEnabled?: boolean;
+  morningReminderTime?: string;
+  eveningReminderEnabled?: boolean;
+  eveningReminderTime?: string;
+  streakReminderEnabled?: boolean;
+  streakReminderTime?: string;
   themeMode?: 'dark' | 'light' | 'system';
   isPhoneFrame?: boolean;
   onboardingCompleted?: boolean;

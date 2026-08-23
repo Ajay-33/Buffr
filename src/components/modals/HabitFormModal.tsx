@@ -9,6 +9,8 @@ import {
   Award,
   Check,
   Gamepad2,
+  Bell,
+  BellOff,
 } from 'lucide-react';
 import {
   Habit,
@@ -71,7 +73,12 @@ export const HabitFormModal: React.FC<HabitFormModalProps> = ({
   const [frequencyDays, setFrequencyDays] = useState<number[]>(editingHabit ? editingHabit.frequencyDays : [0, 1, 2, 3, 4, 5, 6]);
   const [emoji, setEmoji] = useState<string>(editingHabit ? editingHabit.emoji : '⚡');
   const [color, setColor] = useState<string>(editingHabit ? editingHabit.color : '#10b981');
-  const [reminderTime, setReminderTime] = useState<string>(editingHabit ? editingHabit.reminderTime || '08:00' : '08:00');
+  const [isReminderEnabled, setIsReminderEnabled] = useState<boolean>(
+    editingHabit ? Boolean(editingHabit.reminderTime) : false
+  );
+  const [reminderTime, setReminderTime] = useState<string>(
+    editingHabit ? editingHabit.reminderTime || '08:00' : '08:00'
+  );
 
   if (!isOpen) return null;
 
@@ -102,7 +109,7 @@ export const HabitFormModal: React.FC<HabitFormModalProps> = ({
         [category === 'Learning' ? 'Mind' : category === 'Productivity' ? 'Focus' : category]: difficulty === 'extreme' ? 4 : difficulty === 'hard' ? 3 : difficulty === 'medium' ? 2 : 1,
         Discipline: 1,
       },
-      reminderTime: reminderTime || undefined,
+      reminderTime: isReminderEnabled ? (reminderTime || '08:00') : undefined,
       isPaused: editingHabit ? editingHabit.isPaused : false,
       isArchived: editingHabit ? editingHabit.isArchived : false,
       createdAt: editingHabit ? editingHabit.createdAt : new Date().toISOString(),
@@ -502,6 +509,52 @@ export const HabitFormModal: React.FC<HabitFormModalProps> = ({
                         </button>
                       );
                     })}
+                  </div>
+                )}
+              </div>
+
+              {/* Dynamic Notification Reminder */}
+              <div className="p-3 bg-[#0e0722] border-2 border-[#3b2d60] space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    {isReminderEnabled ? (
+                      <Bell className="w-4 h-4 text-yellow-400 animate-pulse" />
+                    ) : (
+                      <BellOff className="w-4 h-4 text-slate-500" />
+                    )}
+                    <div>
+                      <span className="text-[10px] font-arcade text-white block">QUEST NOTIFICATION ALERTS</span>
+                      <span className="text-[11px] text-cyan-300 font-retro">Scheduled Android push reminder</span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playSound('click');
+                      setIsReminderEnabled(!isReminderEnabled);
+                    }}
+                    className={`w-10 h-5 p-0.5 border border-black flex items-center transition-colors ${
+                      isReminderEnabled ? 'bg-green-400' : 'bg-slate-800'
+                    }`}
+                  >
+                    <div
+                      className={`w-4 h-4 bg-black transition-transform ${
+                        isReminderEnabled ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {isReminderEnabled && (
+                  <div className="pt-2 border-t border-[#2a1d48] flex items-center justify-between">
+                    <label className="text-[9px] font-arcade text-slate-300">ALERT TIME:</label>
+                    <input
+                      type="time"
+                      value={reminderTime}
+                      onChange={(e) => setReminderTime(e.target.value)}
+                      className="bg-[#090416] border border-yellow-400/80 px-2 py-1 text-xs font-arcade text-yellow-300 focus:outline-none"
+                    />
                   </div>
                 )}
               </div>
