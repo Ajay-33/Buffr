@@ -5,18 +5,12 @@ import {
   onAuthStateChanged,
   GoogleAuthProvider,
   signInWithCredential,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signInAnonymously,
-  updateProfile,
 } from 'firebase/auth';
 import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import { Capacitor } from '@capacitor/core';
 import { auth } from './config';
 import { FirestoreSyncService } from './firestoreService';
 import { BuffrStorage } from '../storage/db';
-
-const WEB_CLIENT_ID = '424855018399-gi05u4b1toh9ooanb6ujd2nea8jj9hci.apps.googleusercontent.com';
 
 interface AuthContextType {
   currentUser: FirebaseUser | null;
@@ -25,9 +19,6 @@ interface AuthContextType {
   syncStatus: 'idle' | 'syncing' | 'synced' | 'error';
   errorMessage: string | null;
   signInWithGoogle: () => Promise<{ success: boolean; error?: string }>;
-  signInWithEmail: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
-  signUpWithEmail: (email: string, pass: string, name?: string) => Promise<{ success: boolean; error?: string }>;
-  signInAsGuest: () => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
   syncNow: () => Promise<void>;
   clearAuthError: () => void;
@@ -43,7 +34,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      console.log('Auth State Changed:', user ? `User: ${user.email || user.uid}` : 'Signed Out');
+      console.log('Auth State Changed:', user ? `User: ${user.email || user.displayName || user.uid}` : 'Signed Out');
       setCurrentUser(user);
       setLoading(false);
 
@@ -73,27 +64,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const formatAuthError = (err: any): string => {
     const code = err?.code || '';
-    const msg = err?.message || '';
+    const msg = err?.message || String(err);
 
-    if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
-      return 'Incorrect password. Please try again.';
+    if (
+      code === 'auth/popup-closed-by-user' ||
+      code === 'auth/cancelled-popup-request' ||
+      msg.includes('canceled') ||
+      msg.includes('Canceled') ||
+      msg.includes('cancelled') ||
+      msg.includes('12501') // Google Sign-In user cancelled code
+    ) {
+      return 'Sign-in cancelled.';
     }
-    if (code === 'auth/user-not-found') {
-      return 'No hero found with this email. Tap "CREATE ACCOUNT" below.';
+
+    if (code === 'auth/network-request-failed' || msg.includes('network') || msg.includes('NETWORK')) {
+      return 'Network connection issue. Please check your internet connection.';
     }
-    if (code === 'auth/email-already-in-use') {
-      return 'An account already exists with this email. Tap "SIGN IN".';
+
+    if (msg.includes('10:') || msg.includes('DEVELOPER_ERROR')) {
+      return 'Google Sign-In configuration check: Please confirm the app SHA-1 fingerprint matches your Firebase project.';
     }
-    if (code === 'auth/weak-password') {
-      return 'Password must be at least 6 characters long.';
-    }
-    if (code === 'auth/invalid-email') {
-      return 'Please enter a valid email address.';
-    }
-    if (msg.includes('No credentials available') || msg.includes('16') || msg.includes('10')) {
-      return 'Google Sign-In needs Google Play credentials or SHA-1 match. You can sign in instantly using Email/Password or 1-Tap Guest Sync!';
-    }
-    return msg || 'Authentication failed. Please check your credentials.';
+
+    return msg || 'Google Sign-In failed. Please try again.';
   };
 
   const signInWithGoogle = async (): Promise<{ success: boolean; error?: string }> => {
@@ -102,21 +94,31 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setErrorMessage(null);
 
       if (Capacitor.isNativePlatform()) {
-        // 1. Native Google Sign-In via Capacitor Plugin (uses default_web_client_id from strings.xml)
-        console.log('Starting Native Google Sign-In...');
-        const result = await FirebaseAuthentication.signInWithGoogle();
+        console.log('Starting Native Google Sign-In via @capacitor-firebase/authentication...');
+        let result: any = null;
 
-        if (result.user && result.credential?.idToken) {
-          console.log('Native Sign-In Successful, linking to Firebase JS SDK...');
+        try {
+          // Attempt 1: Standard Credential Manager / Android 14+ flow
+          result = await FirebaseAuthentication.signInWithGoogle();
+        } catch (nativeErr: any) {
+          console.warn('Primary CredentialManager attempt failed, falling back to legacy GoogleSignIn intent:', nativeErr);
+          // Attempt 2: Legacy Google Play Services Intent flow
+          result = await FirebaseAuthentication.signInWithGoogle({ useCredentialManager: false });
+        }
+
+        if (result?.credential?.idToken) {
+          console.log('Google ID token obtained, authenticating Firebase JS SDK session...');
           const credential = GoogleAuthProvider.credential(result.credential.idToken);
           await signInWithCredential(auth, credential);
-          console.log('JS SDK Linked Successfully');
+          return { success: true };
+        } else if (result?.user) {
+          console.log('Native user authenticated:', result.user.email);
           return { success: true };
         } else {
-          throw new Error('No ID token returned from Google Play Services.');
+          throw new Error('No credential token received from Google Play Services.');
         }
       } else {
-        // Web Fallback
+        // Web / Browser Preview fallback
         const { signInWithPopup, GoogleAuthProvider: WebGoogleAuthProvider } = await import('firebase/auth');
         const googleProvider = new WebGoogleAuthProvider();
         await signInWithPopup(auth, googleProvider);
@@ -124,60 +126,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     } catch (err: any) {
       console.error('Google Sign-In Error:', err);
-      const formatted = formatAuthError(err);
-      setErrorMessage(formatted);
-      setSyncStatus('error');
-      return { success: false, error: formatted };
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const signInWithEmail = async (email: string, pass: string): Promise<{ success: boolean; error?: string }> => {
-    try {
-      setLoading(true);
-      setErrorMessage(null);
-      await signInWithEmailAndPassword(auth, email.trim(), pass);
-      return { success: true };
-    } catch (err: any) {
-      console.error('Email Sign-In Error:', err);
-      const formatted = formatAuthError(err);
-      setErrorMessage(formatted);
-      setSyncStatus('error');
-      return { success: false, error: formatted };
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const signUpWithEmail = async (email: string, pass: string, name?: string): Promise<{ success: boolean; error?: string }> => {
-    try {
-      setLoading(true);
-      setErrorMessage(null);
-      const userCred = await createUserWithEmailAndPassword(auth, email.trim(), pass);
-      if (name && userCred.user) {
-        await updateProfile(userCred.user, { displayName: name.trim() });
-      }
-      return { success: true };
-    } catch (err: any) {
-      console.error('Email Sign-Up Error:', err);
-      const formatted = formatAuthError(err);
-      setErrorMessage(formatted);
-      setSyncStatus('error');
-      return { success: false, error: formatted };
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const signInAsGuest = async (): Promise<{ success: boolean; error?: string }> => {
-    try {
-      setLoading(true);
-      setErrorMessage(null);
-      await signInAnonymously(auth);
-      return { success: true };
-    } catch (err: any) {
-      console.error('Guest Sign-In Error:', err);
       const formatted = formatAuthError(err);
       setErrorMessage(formatted);
       setSyncStatus('error');
@@ -221,9 +169,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         syncStatus,
         errorMessage,
         signInWithGoogle,
-        signInWithEmail,
-        signUpWithEmail,
-        signInAsGuest,
         signOut,
         syncNow,
         clearAuthError,
