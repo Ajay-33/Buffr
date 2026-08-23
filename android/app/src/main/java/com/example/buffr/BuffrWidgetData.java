@@ -23,6 +23,8 @@ public class BuffrWidgetData {
     private static final String KEY_QUESTS_TOTAL = "quests_total";
     private static final String KEY_QUEST_PERCENT = "quest_percent";
     private static final String KEY_NEXT_QUEST_TITLE = "next_quest_title";
+    private static final String KEY_SYNC_TIMESTAMP = "sync_timestamp";
+    private static final String KEY_LAST_NATIVE_INTERACTION = "last_native_interaction";
     private static final String KEY_HABITS_JSON = "habits_json";
     private static final String KEY_PENDING_COMPLETIONS = "pending_completions";
 
@@ -46,8 +48,17 @@ public class BuffrWidgetData {
             if (obj.has("questsTotal")) editor.putInt(KEY_QUESTS_TOTAL, obj.getInt("questsTotal"));
             if (obj.has("questPercent")) editor.putInt(KEY_QUEST_PERCENT, obj.getInt("questPercent"));
             if (obj.has("nextQuestTitle")) editor.putString(KEY_NEXT_QUEST_TITLE, obj.getString("nextQuestTitle"));
-            if (obj.has("habits")) editor.putString(KEY_HABITS_JSON, obj.getJSONArray("habits").toString());
-
+            
+            // Critical Interlock: Only update habits if the incoming data is newer than the last native click.
+            // This prevents the "revert" flicker when the app sends stale data while a native action is pending.
+            long incomingTs = obj.optLong("syncTimestamp", 0);
+            long lastNativeInteraction = prefs.getLong(KEY_LAST_NATIVE_INTERACTION, 0);
+            
+            if (incomingTs >= lastNativeInteraction) {
+                if (obj.has("habits")) editor.putString(KEY_HABITS_JSON, obj.getJSONArray("habits").toString());
+                if (obj.has("syncTimestamp")) editor.putLong(KEY_SYNC_TIMESTAMP, incomingTs);
+            }
+            
             editor.apply();
 
             // Refresh all home screen widgets immediately
@@ -67,6 +78,15 @@ public class BuffrWidgetData {
         if (hudWidgetIds != null && hudWidgetIds.length > 0) {
             for (int widgetId : hudWidgetIds) {
                 BuffrDailyHUDWidget.updateAppWidget(context, appWidgetManager, widgetId);
+            }
+        }
+
+        // Update Quick Stat Widgets
+        ComponentName quickComponentName = new ComponentName(context, BuffrQuickStatWidget.class);
+        int[] quickWidgetIds = appWidgetManager.getAppWidgetIds(quickComponentName);
+        if (quickWidgetIds != null && quickWidgetIds.length > 0) {
+            for (int widgetId : quickWidgetIds) {
+                BuffrQuickStatWidget.updateAppWidget(context, appWidgetManager, widgetId);
             }
         }
     }
@@ -117,6 +137,10 @@ public class BuffrWidgetData {
 
     public static String getNextQuestTitle(Context context) {
         return getPrefs(context).getString(KEY_NEXT_QUEST_TITLE, "Tap to review today's quest list");
+    }
+
+    public static long getSyncTimestamp(Context context) {
+        return getPrefs(context).getLong(KEY_SYNC_TIMESTAMP, 0);
     }
 
     public static JSONArray getHabitsArray(Context context) {

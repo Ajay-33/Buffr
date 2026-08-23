@@ -22,6 +22,7 @@ export interface WidgetPayload {
   questsTotal: number;
   questPercent: number;
   nextQuestTitle: string;
+  syncTimestamp: number;
   habits: WidgetHabitItem[];
 }
 
@@ -73,6 +74,7 @@ export class BuffrWidgetBridge {
         questsTotal,
         questPercent,
         nextQuestTitle,
+        syncTimestamp: Date.now(),
         habits: widgetHabits,
       };
 

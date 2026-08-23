@@ -67,7 +67,7 @@ public class BuffrActionReceiver extends BroadcastReceiver {
 
             // Adjust XP & Gold
             int currentXp = prefs.getInt("current_xp", 0);
-            int nextLevelXp = prefs.getInt("next_level_xp", 100);
+            int nextLevelXp;
             int gold = prefs.getInt("gold", 50);
             int level = prefs.getInt("level", 1);
 
@@ -104,19 +104,25 @@ public class BuffrActionReceiver extends BroadcastReceiver {
 
             // Level Up Logic
             boolean leveledUp = false;
-            while (currentXp >= nextLevelXp) {
-                currentXp -= nextLevelXp;
+            
+            // Match React XP Formula: Math.round(75 * Math.pow(level, 1.45) + 25)
+            int neededXp = (level <= 1) ? 100 : (int) Math.round(75 * Math.pow(level, 1.45) + 25);
+            
+            while (currentXp >= neededXp) {
+                currentXp -= neededXp;
                 level++;
-                nextLevelXp = level * 100; // Basic progression: 100, 200, 300...
+                neededXp = (int) Math.round(75 * Math.pow(level, 1.45) + 25);
                 leveledUp = true;
             }
+            
             // Handle XP being negative (rare but possible if habit XP changes)
             if (currentXp < 0 && level > 1) {
                 level--;
-                nextLevelXp = level * 100;
-                currentXp = nextLevelXp + currentXp; 
+                neededXp = (level <= 1) ? 100 : (int) Math.round(75 * Math.pow(level, 1.45) + 25);
+                currentXp = neededXp + currentXp; 
             }
 
+            nextLevelXp = neededXp;
             int xpPercent = nextLevelXp > 0 ? Math.min(100, Math.round(((float) currentXp / nextLevelXp) * 100)) : 0;
 
             // Save updated state in SharedPreferences
@@ -130,6 +136,7 @@ public class BuffrActionReceiver extends BroadcastReceiver {
             editor.putInt("next_level_xp", nextLevelXp);
             editor.putInt("xp_percent", xpPercent);
             editor.putInt("gold", gold);
+            editor.putLong("last_native_interaction", System.currentTimeMillis());
 
             // Record in pending completions queue for Web DB synchronization
             String pendingStr = prefs.getString("pending_completions", "[]");

@@ -111,7 +111,6 @@ export default function App() {
         BuffrWidgetBridge.consumePendingWidgetActions((habitId) => {
           handleToggleHabit(habitId);
         });
-        BuffrWidgetBridge.sync();
       }
     };
 
@@ -122,7 +121,7 @@ export default function App() {
       BuffrWidgetBridge.consumePendingWidgetActions((habitId) => {
         handleToggleHabit(habitId);
       });
-    }, 2500);
+    }, 1000); // Increased polling frequency from 2500ms to 1000ms
 
     return () => {
       document.removeEventListener('visibilitychange', handleAppResume);
