@@ -199,8 +199,25 @@ export const calculateDailyScore = (
     }
   });
 
+  // FLEX BONUS ('times_per_week'): completing a flexible quest on any day adds
+  // pure bonus weight - it can RAISE today's score but skipping it NEVER lowers
+  // it (its weight is not added to the denominator). Keeps flexibility honest.
+  habits
+    .filter(
+      (h) =>
+        !h.isArchived && (h.frequencyType || h.frequency?.type) === 'times_per_week'
+    )
+    .forEach((habit) => {
+      const completion = completions.find(
+        (c) => c.habitId === habit.id && c.dateStr === dateStr
+      );
+      if (completion && completion.isCompleted) {
+        earnedWeight += DIFFICULTY_WEIGHTS[habit.difficulty] || 1.0;
+      }
+    });
+
   const rawScore = totalWeight > 0 ? (earnedWeight / totalWeight) * 100 : 0;
-  const score = Math.round(rawScore);
+  const score = Math.min(100, Math.round(rawScore));
 
   let label = 'Needs Work';
   let color = 'text-rose-400';
