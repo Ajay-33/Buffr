@@ -54,11 +54,16 @@ export const isHabitScheduledForDate = (
   habit: {
     frequencyType?: string;
     frequencyDays?: number[];
-    frequency?: { type?: string; days?: number[] };
+    intervalDays?: number;
+    timesPerWeek?: number;
+    frequency?: { type?: string; days?: number[]; intervalDays?: number; timesPerWeek?: number };
     isPaused?: boolean;
     createdAt?: string;
   },
-  dateStr: string
+  dateStr: string,
+  /** Required for 'interval' habits (due-date depends on completion history).
+   *  When omitted, interval habits default to scheduled (safe legacy behavior). */
+  completions?: { habitId: string; dateStr: string; isCompleted: boolean }[]
 ): boolean => {
   if (habit.isPaused) return false;
   // If habit was created after this date, it's not scheduled
@@ -76,9 +81,69 @@ export const isHabitScheduledForDate = (
     case 'custom_days':
       return fDays.includes(dayOfWeek);
     case 'times_per_week':
+      // Flexible target: available every day. Perfect-day scoring excludes it
+      // (see calculateDailyScore) so missing a day never breaks the daily score.
       return true;
+    case 'interval': {
+      const n = Math.max(
+        2,
+        habit.intervalDays ??
+          (habit.frequency as { intervalDays?: number } | undefined)?.intervalDays ??
+          2
+      );
+      if (!completions) return true;
+      const lastDone = completions
+        .filter((c) => c.isCompleted && c.dateStr < dateStr)
+        .map((c) => c.dateStr)
+        .sort()
+        .pop();
+      // Never done -> due immediately. Otherwise due when N+ days have passed.
+      return lastDone === undefined || getDaysBetweenDates(lastDone, dateStr) >= n;
+    }
     default:
       return true;
+  }
+};
+
+/** Whole-day difference: toDate - fromDate */
+export const getDaysBetweenDates = (fromDateStr: string, toDateStr: string): number => {
+  const a = parseDateStr(fromDateStr);
+  const b = parseDateStr(toDateStr);
+  return Math.round((b.getTime() - a.getTime()) / (1000 * 3600 * 24));
+};
+
+/** Monday-based week start for a given date string */
+export const getWeekStart = (dateStr: string): string => {
+  const d = parseDateStr(dateStr);
+  const offset = (d.getDay() + 6) % 7; // Mon=0 ... Sun=6
+  d.setDate(d.getDate() - offset);
+  return formatDate(d);
+};
+
+/** Static badge text describing a habit's repeat rule (no live counters) */
+export const getFrequencyStaticLabel = (habit: {
+  frequencyType?: string;
+  frequencyDays?: number[];
+  intervalDays?: number;
+  timesPerWeek?: number;
+  frequency?: { type?: string; days?: number[]; intervalDays?: number; timesPerWeek?: number };
+}): string => {
+  const fType = habit.frequencyType || habit.frequency?.type || 'daily';
+  const fDays = habit.frequencyDays || habit.frequency?.days || [];
+  const dayNames = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+  switch (fType) {
+    case 'daily':
+      return 'EVERY DAY';
+    case 'weekdays':
+      return 'WEEKDAYS';
+    case 'custom_days':
+      return fDays.map((d) => dayNames[d]).join(' ') || 'CUSTOM';
+    case 'interval':
+      return `EVERY ${Math.max(2, habit.intervalDays ?? habit.frequency?.intervalDays ?? 2)}D`;
+    case 'times_per_week':
+      return `${Math.max(1, Math.min(7, habit.timesPerWeek ?? habit.frequency?.timesPerWeek ?? 3))}/WK FLEX`;
+    default:
+      return '';
   }
 };
 

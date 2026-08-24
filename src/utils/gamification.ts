@@ -157,8 +157,14 @@ export const calculateDailyScore = (
   completions: HabitCompletion[],
   dateStr: string
 ): { score: number; completedCount: number; scheduledCount: number; label: string; color: string } => {
+  // 'times_per_week' habits are intentionally EXCLUDED from the daily score:
+  // their whole point is flexibility, so a missed day must never dent the
+  // perfect-day percentage. They're rewarded via weekly-target streaks instead.
   const scheduledHabits = habits.filter(
-    (h) => !h.isArchived && isHabitScheduledForDate(h, dateStr)
+    (h) =>
+      !h.isArchived &&
+      (h.frequencyType || h.frequency?.type) !== 'times_per_week' &&
+      isHabitScheduledForDate(h, dateStr, completions)
   );
 
   if (scheduledHabits.length === 0) {
@@ -240,6 +246,57 @@ export const calculateHabitStreak = (
 
   const completedDates = new Set(habitCompletions.map((c) => c.dateStr));
 
+  const getMondayOfWeek = (dStr: string): string => {
+    const d = parseDateStr(dStr);
+    const off = (d.getDay() + 6) % 7;
+    d.setDate(d.getDate() - off);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+
+  // ── FLEXIBLE WEEKLY TARGETS ('X of 7 days') ─────────────────────────────
+  // Streaks are counted in consecutive fully-met weeks instead of consecutive
+  // days. The current week never breaks a streak (it isn't finished yet).
+  const fType = habit.frequencyType || habit.frequency?.type || 'daily';
+  if (fType === 'times_per_week') {
+    const target = Math.max(
+      1,
+      Math.min(7, habit.timesPerWeek ?? habit.frequency?.timesPerWeek ?? 3)
+    );
+    const metByWeek = new Map();
+    habitCompletions.forEach((c) => {
+      const wk = getMondayOfWeek(c.dateStr);
+      metByWeek.set(wk, (metByWeek.get(wk) || 0) + 1);
+    });
+
+    const thisWk = getMondayOfWeek(todayStr);
+    const weekKeys = [...new Set([...metByWeek.keys(), thisWk])].sort();
+    let longestFlex = 0;
+    let runFlex = 0;
+    for (const wk of weekKeys) {
+      if ((metByWeek.get(wk) || 0) >= target) {
+        runFlex++;
+        if (runFlex > longestFlex) longestFlex = runFlex;
+      } else if (wk !== thisWk) {
+        runFlex = 0; // finished weeks must meet target to keep the chain
+      }
+    }
+
+    let curFlex = (metByWeek.get(thisWk) || 0) >= target ? 1 : 0;
+    let cursor = parseDateStr(thisWk);
+    for (let guard = 0; guard < 260; guard++) {
+      cursor.setDate(cursor.getDate() - 7);
+      const wk = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}-${String(cursor.getDate()).padStart(2, '0')}`;
+      if ((metByWeek.get(wk) || 0) >= target) curFlex++;
+      else break;
+    }
+
+    return {
+      currentStreak: curFlex,
+      longestStreak: Math.max(longestFlex, curFlex),
+      totalCompletions,
+    };
+  }
+
   let currentStreak = 0;
   let longestStreak = 0;
   let tempStreak = 0;
@@ -247,7 +304,7 @@ export const calculateHabitStreak = (
   // Check from today backwards
   let checkDate = parseDateStr(todayStr);
   let isTodayCompleted = completedDates.has(todayStr);
-  let isTodayScheduled = isHabitScheduledForDate(habit, todayStr);
+  let isTodayScheduled = isHabitScheduledForDate(habit, todayStr, habitCompletions);
 
   // If today is scheduled and completed -> streak starts at 1, check yesterday
   // If today is scheduled and NOT completed yet -> don't break streak yet if yesterday was completed
@@ -261,7 +318,7 @@ export const calculateHabitStreak = (
 
   while (true) {
     const dStr = getTodayStr().length ? getDaysAgo(0, pointerDate) : '';
-    const scheduled = isHabitScheduledForDate(habit, dStr);
+    const scheduled = isHabitScheduledForDate(habit, dStr, habitCompletions);
 
     if (scheduled) {
       if (completedDates.has(dStr)) {
@@ -287,7 +344,7 @@ export const calculateHabitStreak = (
 
   for (let i = 0; i <= 365; i++) {
     const dStr = getDaysAgo(0, scanDate);
-    const scheduled = isHabitScheduledForDate(habit, dStr);
+    const scheduled = isHabitScheduledForDate(habit, dStr, habitCompletions);
 
     if (scheduled) {
       if (completedDates.has(dStr)) {
@@ -497,7 +554,7 @@ export const generateInsights = (
     for (let i = 0; i < 14; i++) {
       const dStr = getDaysAgo(i);
       list.forEach((h) => {
-        if (isHabitScheduledForDate(h, dStr)) {
+        if (isHabitScheduledForDate(h, dStr, completions)) {
           totalScheduled++;
           if (completions.some((c) => c.habitId === h.id && c.dateStr === dStr && c.isCompleted)) {
             totalDone++;
@@ -540,7 +597,7 @@ export const generateInsights = (
     const dStr = getDaysAgo(i);
     const dayOfWeek = parseDateStr(dStr).getDay();
     habits.forEach((h) => {
-      if (isHabitScheduledForDate(h, dStr)) {
+      if (isHabitScheduledForDate(h, dStr, completions)) {
         dayTotals[dayOfWeek].total++;
         if (completions.some((c) => c.habitId === h.id && c.dateStr === dStr && c.isCompleted)) {
           dayTotals[dayOfWeek].done++;
@@ -582,7 +639,7 @@ export const generateInsights = (
   for (let i = 0; i < 7; i++) {
     const dStr = getDaysAgo(i);
     habits.forEach((h) => {
-      if (isHabitScheduledForDate(h, dStr)) {
+      if (isHabitScheduledForDate(h, dStr, completions)) {
         thisWeekTotal++;
         if (completions.some((c) => c.habitId === h.id && c.dateStr === dStr && c.isCompleted)) {
           thisWeekDone++;
@@ -594,7 +651,7 @@ export const generateInsights = (
   for (let i = 7; i < 14; i++) {
     const dStr = getDaysAgo(i);
     habits.forEach((h) => {
-      if (isHabitScheduledForDate(h, dStr)) {
+      if (isHabitScheduledForDate(h, dStr, completions)) {
         lastWeekTotal++;
         if (completions.some((c) => c.habitId === h.id && c.dateStr === dStr && c.isCompleted)) {
           lastWeekDone++;

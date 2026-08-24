@@ -16,7 +16,14 @@ export type HabitDifficulty = 'easy' | 'medium' | 'hard' | 'extreme';
 
 export type HabitType = 'boolean' | 'count' | 'duration' | 'quantity' | 'avoidance';
 
-export type FrequencyType = 'daily' | 'weekdays' | 'custom_days' | 'times_per_week';
+/**
+ * daily       - every single day
+ * weekdays    - Mon-Fri
+ * custom_days - specific weekdays (frequencyDays)
+ * times_per_week - flexible target: N of 7 days, any days
+ * interval    - every N days (next due = last completion + N)
+ */
+export type FrequencyType = 'daily' | 'weekdays' | 'custom_days' | 'times_per_week' | 'interval';
 
 export interface AttributeBoostMap {
   Strength?: number;
@@ -33,6 +40,10 @@ export interface AttributeBoostMap {
 export interface HabitFrequency {
   type: FrequencyType;
   days?: number[];
+  /** For 'interval' type: repeat every N days */
+  intervalDays?: number;
+  /** For 'times_per_week' type: target count out of 7 flexible days */
+  timesPerWeek?: number;
 }
 
 export interface Habit {
@@ -50,6 +61,10 @@ export interface Habit {
   unit?: string;
   frequencyType?: FrequencyType;
   frequencyDays?: number[];
+  /** For 'interval' type: repeat every N days (mirrored in frequency) */
+  intervalDays?: number;
+  /** For 'times_per_week' type: target count out of 7 flexible days */
+  timesPerWeek?: number;
   frequency?: HabitFrequency;
   xpReward: number;
   attributeBoosts?: AttributeBoostMap;

@@ -1,6 +1,6 @@
 import { BuffrStorage } from '../storage/db';
 import { calculateLevelFromTotalXp } from './gamification';
-import { getTodayStr } from './dateUtils';
+import { getTodayStr, isHabitScheduledForDate } from './dateUtils';
 
 export interface WidgetHabitItem {
   id: string;
@@ -38,7 +38,6 @@ export class BuffrWidgetBridge {
 
     try {
       const user = BuffrStorage.getUser();
-      const habits = BuffrStorage.getHabits().filter((h) => !h.isArchived && !h.isPaused);
       const completions = BuffrStorage.getCompletions();
 
       // IMPORTANT: must use the LOCAL date (same as getTodayStr() used when
@@ -46,6 +45,12 @@ export class BuffrWidgetBridge {
       // and timezone offset (e.g. 00:00–05:30 IST) the widget would filter out
       // ALL of today's completions and render every quest as unchecked.
       const todayStr = getTodayStr();
+
+      // Only surface quests that are actually DUE today on the widget:
+      // interval quests vanish on rest days, flexible ones always show.
+      const habits = BuffrStorage.getHabits().filter(
+        (h) => !h.isArchived && !h.isPaused && isHabitScheduledForDate(h, todayStr, completions)
+      );
       const todayCompletions = completions.filter((c) => c.dateStr === todayStr && c.isCompleted);
       const completedHabitIds = new Set(todayCompletions.map((c) => c.habitId));
 

@@ -71,6 +71,12 @@ export const HabitFormModal: React.FC<HabitFormModalProps> = ({
   const [unit, setUnit] = useState<string>(editingHabit ? editingHabit.unit || '' : '');
   const [frequencyType, setFrequencyType] = useState<FrequencyType>(editingHabit ? editingHabit.frequencyType : 'daily');
   const [frequencyDays, setFrequencyDays] = useState<number[]>(editingHabit ? editingHabit.frequencyDays : [0, 1, 2, 3, 4, 5, 6]);
+  const [intervalDays, setIntervalDays] = useState<number>(
+    editingHabit ? editingHabit.intervalDays || editingHabit.frequency?.intervalDays || 2 : 2
+  );
+  const [timesPerWeek, setTimesPerWeek] = useState<number>(
+    editingHabit ? editingHabit.timesPerWeek || editingHabit.frequency?.timesPerWeek || 3 : 3
+  );
   const [emoji, setEmoji] = useState<string>(editingHabit ? editingHabit.emoji : '⚡');
   const [color, setColor] = useState<string>(editingHabit ? editingHabit.color : '#10b981');
   const [isReminderEnabled, setIsReminderEnabled] = useState<boolean>(
@@ -104,6 +110,19 @@ export const HabitFormModal: React.FC<HabitFormModalProps> = ({
       unit: habitType === 'boolean' || habitType === 'avoidance' ? undefined : unit.trim() || undefined,
       frequencyType,
       frequencyDays,
+      // Dynamic scheduling payloads (mirrored flat + nested for compatibility)
+      intervalDays: frequencyType === 'interval' ? Math.max(2, Math.min(365, intervalDays)) : undefined,
+      timesPerWeek: frequencyType === 'times_per_week' ? Math.max(1, Math.min(7, timesPerWeek)) : undefined,
+      frequency: {
+        type: frequencyType,
+        days: frequencyDays,
+        intervalDays:
+          frequencyType === 'interval' ? Math.max(2, Math.min(365, intervalDays)) : undefined,
+        timesPerWeek:
+          frequencyType === 'times_per_week'
+            ? Math.max(1, Math.min(7, timesPerWeek))
+            : undefined,
+      },
       xpReward: baseXP,
       attributeBoosts: {
         [category === 'Learning' ? 'Mind' : category === 'Productivity' ? 'Focus' : category]: difficulty === 'extreme' ? 4 : difficulty === 'hard' ? 3 : difficulty === 'medium' ? 2 : 1,
@@ -464,11 +483,13 @@ export const HabitFormModal: React.FC<HabitFormModalProps> = ({
                   <Calendar className="w-3 h-3 text-cyan-400" />
                   <span>FREQUENCY REPEAT</span>
                 </label>
-                <div className="flex space-x-2 mb-2">
+                <div className="flex flex-wrap gap-1 mb-2">
                   {[
                     { id: 'daily' as FrequencyType, label: 'EVERY DAY' },
                     { id: 'weekdays' as FrequencyType, label: 'WEEKDAYS' },
                     { id: 'custom_days' as FrequencyType, label: 'CUSTOM' },
+                    { id: 'interval' as FrequencyType, label: 'EVERY N DAYS' },
+                    { id: 'times_per_week' as FrequencyType, label: 'FLEXIBLE' },
                   ].map((freq) => (
                     <button
                       key={freq.id}
@@ -479,7 +500,7 @@ export const HabitFormModal: React.FC<HabitFormModalProps> = ({
                         if (freq.id === 'daily') setFrequencyDays([0, 1, 2, 3, 4, 5, 6]);
                         if (freq.id === 'weekdays') setFrequencyDays([1, 2, 3, 4, 5]);
                       }}
-                      className={`flex-1 py-1 text-[9px] font-arcade border ${
+                      className={`flex-1 min-w-[64px] py-1 text-[8px] font-arcade border ${
                         frequencyType === freq.id
                           ? 'bg-cyan-400 text-black border-black font-bold'
                           : 'bg-[#090416] text-slate-400 border-[#3b2d60]'
@@ -509,6 +530,69 @@ export const HabitFormModal: React.FC<HabitFormModalProps> = ({
                         </button>
                       );
                     })}
+                  </div>
+                )}
+
+                {frequencyType === 'interval' && (
+                  <div className="flex items-center justify-between pt-1 px-1">
+                    <span className="text-[9px] font-retro text-slate-300">REPEAT EVERY</span>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          playSound('click');
+                          setIntervalDays((v) => Math.max(2, v - 1));
+                        }}
+                        className="w-7 h-7 text-xs font-arcade bg-[#090416] text-cyan-300 border border-[#3b2d60] active:bg-[#3b2d60]"
+                      >
+                        −
+                      </button>
+                      <span className="text-[11px] font-arcade text-white min-w-[64px] text-center">
+                        {intervalDays} DAY{intervalDays > 1 ? 'S' : ''}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          playSound('click');
+                          setIntervalDays((v) => Math.min(365, v + 1));
+                        }}
+                        className="w-7 h-7 text-xs font-arcade bg-[#090416] text-cyan-300 border border-[#3b2d60] active:bg-[#3b2d60]"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {frequencyType === 'times_per_week' && (
+                  <div className="pt-1 px-1 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] font-retro text-slate-300">
+                        TARGET PER WEEK (ANY DAYS)
+                      </span>
+                      <span className="text-[11px] font-arcade text-yellow-300">
+                        {timesPerWeek}/7
+                      </span>
+                    </div>
+                    <div className="flex justify-between space-x-1">
+                      {[1, 2, 3, 4, 5, 6, 7].map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => {
+                            playSound('click');
+                            setTimesPerWeek(n);
+                          }}
+                          className={`w-8 h-8 text-[10px] font-arcade border ${
+                            timesPerWeek === n
+                              ? 'bg-yellow-400 text-black border-black font-bold'
+                              : 'bg-[#090416] text-slate-400 border-[#3b2d60]'
+                          }`}
+                        >
+                          {n}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
