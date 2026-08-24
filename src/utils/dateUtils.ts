@@ -147,6 +147,66 @@ export const getFrequencyStaticLabel = (habit: {
   }
 };
 
+export interface FlexibleWeeklyItem {
+  habitId: string;
+  title: string;
+  emoji: string;
+  target: number;
+  done: number;
+  met: boolean;
+}
+
+/**
+ * Aggregates every 'times_per_week' habit's progress within the Mon-Sun week
+ * containing refDateStr. Powers the weekly score surfaces (Today header chip,
+ * Weekly Review) so flexible quests accumulate visibly like fixed ones.
+ */
+export const getFlexibleWeeklySummary = (
+  habits: {
+    id: string;
+    title: string;
+    emoji?: string;
+    isArchived?: boolean;
+    isPaused?: boolean;
+    timesPerWeek?: number;
+    frequencyType?: string;
+    frequency?: { type?: string; timesPerWeek?: number };
+  }[],
+  completions: { habitId: string; dateStr: string; isCompleted: boolean }[],
+  refDateStr: string
+): { items: FlexibleWeeklyItem[]; totalDone: number; totalTarget: number } => {
+  const weekStart = getWeekStart(refDateStr);
+
+  const items: FlexibleWeeklyItem[] = habits
+    .filter(
+      (h) =>
+        !h.isArchived &&
+        !h.isPaused &&
+        (h.frequencyType || h.frequency?.type) === 'times_per_week'
+    )
+    .map((h) => {
+      const target = Math.max(
+        1,
+        Math.min(7, h.timesPerWeek ?? h.frequency?.timesPerWeek ?? 3)
+      );
+      const done = completions.filter(
+        (c) => c.habitId === h.id && c.isCompleted && getWeekStart(c.dateStr) === weekStart
+      ).length;
+      return {
+        habitId: h.id,
+        title: h.title,
+        emoji: h.emoji || '🎯',
+        target,
+        done,
+        met: done >= target,
+      };
+    });
+
+  const totalDone = items.reduce((acc, i) => acc + i.done, 0);
+  const totalTarget = items.reduce((acc, i) => acc + i.target, 0);
+  return { items, totalDone, totalTarget };
+};
+
 export const getMonthMatrix = (year: number, monthIndex: number): (string | null)[][] => {
   // monthIndex: 0-11
   const firstDay = new Date(year, monthIndex, 1);

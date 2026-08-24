@@ -47,6 +47,7 @@ import {
   formatLongDate,
   getDaysAgo,
   formatDisplayDate,
+  getFlexibleWeeklySummary,
 } from '../../utils/dateUtils';
 import { motion, AnimatePresence } from 'motion/react';
 import { playSound, triggerHapticPulse } from '../../utils/sound';
@@ -99,6 +100,8 @@ export const TodayView: React.FC<TodayViewProps> = ({
 }) => {
   const todayStr = getTodayStr();
   const yesterdayStr = getDaysAgo(1);
+  // Live weekly accumulation for flexible (X of 7) quests
+  const flexSummary = getFlexibleWeeklySummary(habits, completions, todayStr);
 
   // Active view date for logging
   const [activeDateStr, setActiveDateStr] = useState<string>(todayStr);
@@ -442,6 +445,23 @@ export const TodayView: React.FC<TodayViewProps> = ({
                 {dayStats.completedCount}/{dayStats.scheduledCount}
               </span>
             </div>
+
+            {flexSummary.items.length > 0 && (
+              <div className="p-2.5 sm:p-3 bg-[#11092a] border-2 border-pink-400/60 shadow-[2px_2px_0px_#05020a] flex flex-col justify-center">
+                <span className="text-[8px] sm:text-[9px] text-pink-300 font-arcade">
+                  🎲 FLEX WK
+                </span>
+                <span
+                  className={`text-sm sm:text-base font-arcade mt-0.5 ${
+                    flexSummary.totalDone >= flexSummary.totalTarget
+                      ? 'text-green-400'
+                      : 'text-yellow-300'
+                  }`}
+                >
+                  {flexSummary.totalDone}/{flexSummary.totalTarget}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { X, TrendingUp, Sparkles, CheckCircle2, Flame, Award } from 'lucide-react';
 import { Habit, HabitCompletion } from '../../types';
-import { getDaysAgo } from '../../utils/dateUtils';
+import { getDaysAgo, getFlexibleWeeklySummary, getTodayStr } from '../../utils/dateUtils';
 import { calculateDailyScore } from '../../utils/gamification';
 import { playSound } from '../../utils/sound';
 
@@ -69,6 +69,9 @@ export const WeeklyReviewModal: React.FC<WeeklyReviewModalProps> = ({
       topCategory = cat;
     }
   });
+
+  // FLEX QUESTS: weekly accumulation for 'times_per_week' habits
+  const flexSummary = getFlexibleWeeklySummary(habits, completions, getTodayStr());
 
   return (
     <div
@@ -163,6 +166,54 @@ export const WeeklyReviewModal: React.FC<WeeklyReviewModalProps> = ({
               </div>
             </div>
           </div>
+
+          {/* Flexible Weekly Targets */}
+          {flexSummary.items.length > 0 && (
+            <div className="p-3 bg-[#090416] border-2 border-pink-400/70 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-arcade text-[9px] text-pink-400">
+                  🎲 FLEX QUESTS THIS WEEK
+                </span>
+                <span
+                  className={`text-xs font-arcade ${
+                    flexSummary.totalDone >= flexSummary.totalTarget
+                      ? 'text-green-400'
+                      : 'text-yellow-300'
+                  }`}
+                >
+                  {flexSummary.totalDone}/{flexSummary.totalTarget}
+                </span>
+              </div>
+
+              {flexSummary.items.map((it) => (
+                <div key={it.habitId} className="flex items-center space-x-2">
+                  <span className="text-sm w-5 text-center">{it.emoji}</span>
+                  <span className="flex-1 text-[10px] font-retro text-slate-200 truncate">
+                    {it.title}
+                  </span>
+                  <div className="w-16 h-1.5 bg-[#2a1d48] overflow-hidden">
+                    <div
+                      className={`h-full ${it.met ? 'bg-green-400' : 'bg-pink-400'}`}
+                      style={{ width: `${Math.min(100, (it.done / it.target) * 100)}%` }}
+                    />
+                  </div>
+                  <span
+                    className={`text-[10px] font-arcade w-9 text-right ${
+                      it.met ? 'text-green-400' : 'text-slate-300'
+                    }`}
+                  >
+                    {it.done}/{it.target}
+                  </span>
+                </div>
+              ))}
+
+              <p className="text-[10px] text-slate-400 font-retro border-t border-[#2a1d48] pt-1.5">
+                {flexSummary.totalDone >= flexSummary.totalTarget
+                  ? '⚡ All flex targets cleared - weekly streaks locked in!'
+                  : `🎯 ${flexSummary.totalTarget - flexSummary.totalDone} more flex clears to lock this week's streaks.`}
+              </p>
+            </div>
+          )}
 
           {/* Weekly Takeaway / Insight */}
           <div className="p-3 bg-[#090416] border border-[#3b2d60] text-xs text-slate-300 space-y-1">
