@@ -8,6 +8,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # GITHUB_TOKEN needs write access to create Releases
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout Code
@@ -74,3 +77,32 @@ jobs:
         with:
           name: Buffr-Beta-Build
           path: build-output/Buffr-v1.0-Beta.apk
+
+      # ── PERMANENT LATEST RELEASE ────────────────────────────────
+      # Release assets never expire (unlike 90-day artifacts) and the rolling
+      # 'latest' tag is always re-pointed at the newest commit.
+      - name: Remove Previous Latest Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete latest --yes --cleanup-tag 2>/dev/null || echo "No previous latest release - creating fresh"
+
+      - name: Publish Rolling Latest Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: "Latest Build"
+          body: |
+            ⚡ Automatic build from commit ${{ github.sha }}
+            🕒 Built: ${{ github.event.head_commit.timestamp }}
+
+            📲 **Install:** download `Buffr-v1.0-Beta.apk` below, open it on your
+            Android device and allow installs from unknown sources.
+            ✍️ Signed with the pinned debug certificate registered in Firebase,
+            so Google Sign-In works out of the box.
+          draft: false
+          prerelease: false
+          make_latest: true
+          files: build-output/Buffr-v1.0-Beta.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
