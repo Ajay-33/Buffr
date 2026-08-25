@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   X,
   Sparkles,
@@ -85,6 +85,38 @@ export const HabitFormModal: React.FC<HabitFormModalProps> = ({
   const [reminderTime, setReminderTime] = useState<string>(
     editingHabit ? editingHabit.reminderTime || '08:00' : '08:00'
   );
+
+  // ── STALE-STATE FIX ──────────────────────────────────────────────────────
+  // useState initializers run ONLY on first mount. This modal stays mounted
+  // (it just renders null when closed), so opening it later kept whatever the
+  // previous session typed - e.g. EDIT showing the last ADDED task's values.
+  // Re-seed every field from props on each open.
+  useEffect(() => {
+    if (!isOpen) return;
+    setActiveTab('custom');
+    setTitle(editingHabit ? editingHabit.title : '');
+    setDescription(editingHabit ? editingHabit.description || '' : '');
+    setCategory(editingHabit ? editingHabit.category : 'Fitness');
+    setTimeOfDay(editingHabit ? editingHabit.timeOfDay : 'morning');
+    setHabitType(editingHabit ? editingHabit.habitType : 'boolean');
+    setDifficulty(editingHabit ? editingHabit.difficulty : 'medium');
+    setTargetValue(editingHabit ? editingHabit.targetValue : 1);
+    setUnit(editingHabit ? editingHabit.unit || '' : '');
+    setFrequencyType(editingHabit ? editingHabit.frequencyType : 'daily');
+    setFrequencyDays(
+      editingHabit ? editingHabit.frequencyDays || [0, 1, 2, 3, 4, 5, 6] : [0, 1, 2, 3, 4, 5, 6]
+    );
+    setIntervalDays(
+      editingHabit ? editingHabit.intervalDays || editingHabit.frequency?.intervalDays || 2 : 2
+    );
+    setTimesPerWeek(
+      editingHabit ? editingHabit.timesPerWeek || editingHabit.frequency?.timesPerWeek || 3 : 3
+    );
+    setEmoji(editingHabit ? editingHabit.emoji : '⚡');
+    setColor(editingHabit ? editingHabit.color : '#10b981');
+    setIsReminderEnabled(editingHabit ? Boolean(editingHabit.reminderTime) : false);
+    setReminderTime(editingHabit ? editingHabit.reminderTime || '08:00' : '08:00');
+  }, [isOpen, editingHabit]);
 
   if (!isOpen) return null;
 

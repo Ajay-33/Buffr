@@ -169,8 +169,35 @@ export default function App() {
         BuffrStorage.saveHabits(cloudData.habits);
       }
       if (cloudData.completions && cloudData.completions.length > 0) {
-        setCompletions(cloudData.completions);
-        BuffrStorage.saveCompletions(cloudData.completions);
+        // ── SNAPSHOT-RACE FIX ──────────────────────────────────────────────
+        // Merge cloud records by habit|date, keeping whichever copy was written
+        // LAST (completedAt). Wholesale replacement let a delayed Firestore
+        // snapshot resurrect an un-logged quest - the Archive Replay bug where
+        // a logged→unlogged habit flipped back to CLEARED on the next toggle.
+        setCompletions((prevLocal) => {
+          const byKey = new Map();
+          const consider = (c) => {
+            const key = `${c.habitId}|${c.dateStr}`;
+            const existing = byKey.get(key);
+            if (!existing) {
+              byKey.set(key, c);
+              return;
+            }
+            const incomingTs = c.completedAt || '';
+            const existingTs = existing.completedAt || '';
+            if (incomingTs !== existingTs) {
+              byKey.set(key, incomingTs > existingTs ? c : existing);
+            } else if (c.isCompleted !== existing.isCompleted) {
+              // Identical timestamps with conflicting state -> trust the completion
+              byKey.set(key, c.isCompleted ? c : existing);
+            }
+          };
+          prevLocal.forEach(consider);
+          cloudData.completions.forEach(consider);
+          const merged = [...byKey.values()];
+          BuffrStorage.saveCompletions(merged);
+          return merged;
+        });
       }
       if (cloudData.reflections && cloudData.reflections.length > 0) {
         setReflections(cloudData.reflections);

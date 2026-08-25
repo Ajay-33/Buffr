@@ -181,16 +181,16 @@ export class BuffrStorage {
   }
 
   public static saveCompletion(completion: HabitCompletion): void {
-    const completions = this.getCompletions();
-    const idx = completions.findIndex(
-      (c) => c.habitId === completion.habitId && c.dateStr === completion.dateStr
-    );
-    if (idx >= 0) {
-      completions[idx] = completion;
-    } else {
-      completions.push(completion);
-    }
-    this.saveCompletions(completions);
+    // Hard guarantee: exactly ONE record per habit+date pair. Filtering-then-push
+    // also heals any duplicate ghosts left by older builds instead of letting
+    // stale entries resurface in the Archive Replay view.
+    const others = this
+      .getCompletions()
+      .filter(
+        (c) => !(c.habitId === completion.habitId && c.dateStr === completion.dateStr)
+      );
+    others.push(completion);
+    this.saveCompletions(others);
   }
 
   // XP Transactions
